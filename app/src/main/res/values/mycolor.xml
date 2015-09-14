@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="processingColor">#00FA9A</color>
+    <color name="completedColor">#98F5FF</color>
+    <color name="failedColor">#FFEFD5</color>
+    <color name="creatingColor">#4F94CD</color>
+    <color name="list_pressed_color">#FCFCFC</color>
+
+    <color name="white_smoke">#F5F5F5</color><!--烟白色 -->
+
+</resources>

@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.exc.zhen.orienteering.CreateActivity">
+
+    <item android:id="@+id/save"
+        android:title="@string/save"
+        android:orderInCategory="99"
+        app:showAsAction="never" />
+
+    <item android:id="@+id/create_done"
+        android:title="@string/create_done"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+</menu>

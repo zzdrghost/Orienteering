@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">MY定向</string>
+    <string name="action_settings">设置</string>
+    <string name="tencentMapSDK_key">VXTBZ-6NBWQ-3MJ57-GCRHP-HGHIK-SQBCC</string>
+    <string name="title_activity_main">主界面</string>
+    <string name="default_title">任务</string>
+    <string name="default_state">已完成</string>
+    <string name="default_time">剩余时间  0:00</string>
+    <string name="action_new_mission">新建任务</string>
+    <string name="action_about">关于</string>
+    <string name="title_activity_create">新建任务界面</string>
+    <string name="enter_answer">输入答案</string>
+    <string name="enter_question">输入一个问题</string>
+    <string name="enter_title">输入任务标题</string>
+    <string name="create_done">创建完成</string>
+    <string name="insert_picture">插入一张图片</string>
+    <string name="save">保存</string>
+    <string name="complete">完成任务</string>
+    <string name="give_up">放弃任务</string>
+    <string name="title_activity_mission">任务进行界面</string>
+    <string name="menu_title_create">新建任务</string>
+    <string name="menu_title_mission">当前任务</string>
+    <string name="menu_title_main"> </string>
+    <string name="current_mission_title">当前任务标题</string>
+    <string name="current_question">当前任务问题</string>
+    <string name="display_picture">显示一张图片</string>
+    <string name="answer_question">回答问题获取提示</string>
+    <string name="confirm_answer">确认答案</string>
+
+</resources>

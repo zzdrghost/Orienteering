@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.exc.zhen.orienteering.MissionActivity">
+    <item android:id="@+id/give_up"
+        android:title="@string/give_up"
+        android:orderInCategory="99"
+        app:showAsAction="never" />
+    <item android:id="@+id/complete"
+        android:title="@string/complete"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+</menu>

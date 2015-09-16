@@ -5,8 +5,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,7 +25,11 @@ import com.tencent.map.geolocation.TencentLocation;
 import com.tencent.map.geolocation.TencentLocationListener;
 import com.tencent.map.geolocation.TencentLocationManager;
 import com.tencent.map.geolocation.TencentLocationRequest;
+import com.tencent.map.geolocation.TencentLocationUtils;
+import com.tencent.mapsdk.raster.model.BitmapDescriptorFactory;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +50,8 @@ public class MissionActivity extends Activity {
     private double latitude,longitude,height;
     private double orientation;
     private boolean positioning = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,9 +93,21 @@ public class MissionActivity extends Activity {
 
         mission_title.setText(cur_Mission.name);
         question.setText(cur_Point.question);
-
+        if (answers_done.get(cur_Point.order_num-1)){
+            answer.setText(cur_Point.answer);
+            displayImg(cur_Point);
+        }else {
+            imageView.setImageBitmap(BitmapDescriptorFactory.fromAsset("hint.png").getBitmap());
+        }
         p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
 
+    }
+    private void displayImg(MsPoint msp){
+        //图片解析成Bitmap对象
+        BitmapFactory.Options bitmapOption = new BitmapFactory.Options();
+        bitmapOption.inSampleSize = 4;
+        Bitmap bitmap = BitmapFactory.decodeFile(msp.img_address,bitmapOption);
+        imageView.setImageBitmap(bitmap);
     }
 
     //TODO 确认位置等手机参数正确
@@ -105,13 +127,18 @@ public class MissionActivity extends Activity {
                     height = tencentLocation.getAltitude();
                     String key = TencentLocation.EXTRA_DIRECTION;
                     orientation = tencentLocation.getExtra().getDouble(key);
+
+//                    if (0.003 < Math.abs(latitude-cur_Point.latitude)) FoundPoint = false;
+//                    if (0.003 < Math.abs(longitude-cur_Point.longitude)) FoundPoint = false;
 //                    TODO 定位数据与任务数据比较
+
+                    double distance = TencentLocationUtils.distanceBetween(latitude,longitude,
+                            cur_Point.latitude,cur_Point.longitude);
                     new AlertDialog.Builder(MissionActivity.this)
                             .setMessage(cur_Point.latitude + "," + cur_Point.longitude
                                     + "\n" + latitude + "," + longitude
-                            +"\n"+cur_Point.orientation+"\n"+orientation).show();
-                    if (0.003 < Math.abs(latitude-cur_Point.latitude)) FoundPoint = false;
-                    if (0.003 < Math.abs(longitude-cur_Point.longitude)) FoundPoint = false;
+                                    +"\n"+distance+"\n"+cur_Point.orientation+"\n"+orientation).show();
+                    if (25 < distance) FoundPoint = false;
                     if (2 < Math.abs(orientation-cur_Point.orientation)) FoundPoint = false;
                     if (FoundPoint){
                         p_confirm.setTextColor(Color.RED);
@@ -121,7 +148,7 @@ public class MissionActivity extends Activity {
                         answers_done.set(cur_Point.order_num-1,true);
                         if (answers_done.get(cur_Point.order_num-1)){
                             answer.setText(cur_Point.answer);
-//TODO                    imageView.setImageBitmap();
+                            displayImg(cur_Point);
                         }
                         if (cur_Point.order_num == cur_PointList.size()){
                             cur_Mission.state = "已完成";
@@ -158,12 +185,13 @@ public class MissionActivity extends Activity {
         answer.setText(msp.answer);
         p_confirm.setText(Integer.toString(msp.order_num)+mission_cnt_str);
         p_confirm.setTextColor(Color.RED);
-//TODO        imageView.setImageBitmap();
+        displayImg(msp);
     }
     public void confirm_answer_click(View view) {
         if (answer.getText().toString().equals(cur_Point.answer)){
             answers_done.set(cur_Point.order_num-1,true);
-//TODO            imageView.setImageBitmap();
+            displayImg(cur_Point);
+            Toast.makeText(this,"答案正确",Toast.LENGTH_SHORT).show();
         }else
             Toast.makeText(this,"答案错误",Toast.LENGTH_SHORT).show();
     }
@@ -200,14 +228,14 @@ public class MissionActivity extends Activity {
                         answer.setText("");
                         p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
                         p_confirm.setTextColor(Color.BLACK);
-//TODO                  imageView.setImageBitmap();
-                    }else {
+                        displayImg(cur_Point);
+                    } else {
                         question.setText(cur_Point.question);
                         answer.setText("");
-                        p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
+                        p_confirm.setText(Integer.toString(cur_Point.order_num) + mission_cnt_str);
                         p_confirm.setTextColor(Color.BLACK);
                         //设置为空图片
-//TODO                  imageView.setImageBitmap();
+                        imageView.setImageBitmap(BitmapDescriptorFactory.fromAsset("hint.png").getBitmap());
                     }
                 }
             }else
@@ -297,5 +325,4 @@ public class MissionActivity extends Activity {
         dmr.closeDB();
         super.onDestroy();
     }
-
 }

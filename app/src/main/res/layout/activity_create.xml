@@ -39,8 +39,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/imageView_c"
+            android:onClick="imageView_c_click"
             android:contentDescription="@string/insert_picture"
-            android:background="@drawable/img_view_bg"/>
+            android:background="@drawable/img_view_bg" />
     </LinearLayout>
     <LinearLayout
         android:id="@+id/buttonPanel_c"
@@ -54,6 +55,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/point_before_c"
+            android:text="@string/before"
             android:layout_weight="1"
             android:onClick="point_before_c_click"/>
         <Button
@@ -61,6 +63,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/position_get"
+            android:text="@string/locate"
             android:layout_weight="1"
             android:onClick="position_get_click" />
         <Button
@@ -68,6 +71,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/point_next_c"
+            android:text="@string/next"
             android:layout_weight="1"
             android:onClick="point_next_c_click"/>
     </LinearLayout>

@@ -6,12 +6,17 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,6 +31,9 @@ import com.tencent.map.geolocation.TencentLocationListener;
 import com.tencent.map.geolocation.TencentLocationManager;
 import com.tencent.map.geolocation.TencentLocationRequest;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +47,12 @@ public class CreateActivity extends Activity {
     private EditText mission_title,question,answer;
     private Button p_get;
     private ImageView imageView;
+    private final static String savePath = Environment.getExternalStorageDirectory().
+            getPath()+"/orienteeringImg/";
+    private Uri imageUri;
+    private String imageName;
+    public static final int TAKE_PHOTO = 1;
+    public static final int CROP_PHOTO = 2;
 
     private TencentLocationManager locationManager;
 
@@ -100,6 +114,9 @@ public class CreateActivity extends Activity {
             cur_PointList = dmr.queryMsPoint(cur_msid);
             cur_Point.order_num = cur_PointList.size()+1;
         }else {
+            if (null != dmr.getLastMission())
+                cur_msid = dmr.getLastMission().mission_id + 1;
+            else cur_msid = 1;
             cur_Mission = new Mission();
             cur_PointList = new ArrayList<>();
             cur_Point.order_num = cur_PointList.size()+1;
@@ -120,7 +137,7 @@ public class CreateActivity extends Activity {
         p_get.setText(Integer.toString(cur_Point.order_num));
     }
 
-    //TODO 获取手机参数
+    //获取手机参数
     private void get_phone_param(){
 
         TencentLocationRequest request = TencentLocationRequest.create();
@@ -163,13 +180,13 @@ public class CreateActivity extends Activity {
             Toast.makeText(CreateActivity.this,"定位失败 "+error,Toast.LENGTH_SHORT).show();
         }
     }
-    //TODO 判断当前point是否成功获取有效手机参数
+    // 判断当前point是否成功获取有效手机参数
     private boolean get_phone_param_done(MsPoint msp){
         return (!(msp.latitude == 0.0 || msp.longitude == 0.0 || msp.orientation == -1) && param_get);
     }
-    //TODO 判断当前point是否可以保存
+    // 判断当前point是否可以保存
     private boolean isValidPoint(MsPoint msp){
-        return (get_phone_param_done(msp));
+        return (get_phone_param_done(msp) && !"".equals(cur_Point.img_address));
     }
     //将当前point插入pointList（更新及插入）
     private void updateList(){
@@ -188,13 +205,17 @@ public class CreateActivity extends Activity {
         }
         question.setText(msp.question);
         answer.setText(msp.answer);
-//TODO        imageView.setImageBitmap();
+        //图片解析成Bitmap对象
+        BitmapFactory.Options bitmapOption = new BitmapFactory.Options();
+        bitmapOption.inSampleSize = 4;
+        Bitmap bitmap = BitmapFactory.decodeFile(cur_Point.img_address,bitmapOption);
+        imageView.setImageBitmap(bitmap);
     }
+
     //把当前View的值付给当前point
     private void getView2P(){
         cur_Point.question = question.getText().toString();
         cur_Point.answer = answer.getText().toString();
-//TODO        cur_Point.img_address = imageView.getBackground();
     }
     public void point_before_c_click(View view) {
         if (!positioning){
@@ -208,12 +229,60 @@ public class CreateActivity extends Activity {
             }
         }
     }
-
+    //点击imageView获取照片
+    public void imageView_c_click(View view) {
+        new AlertDialog.Builder(this)
+                .setTitle("拍照")
+                .setMessage("拍张提示照片")
+                .setNegativeButton("取消",null)
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        imageName =  cur_msid + "_" + cur_Point.order_num;
+                        String sdStatus = Environment.getExternalStorageState();
+                        if(!sdStatus.equals(Environment.MEDIA_MOUNTED)) { // 检测sd是否可用
+                            return;
+                        }
+                        File imgDir = new File(savePath);
+                        imgDir.mkdirs();
+                        File outputImage = new File(imgDir,imageName+".jpg");
+                        try {
+                            if(outputImage.exists()) {
+                                outputImage.delete();
+                            }
+                            outputImage.createNewFile();
+                        } catch(IOException e) {
+                            e.printStackTrace();
+                        }
+                        imageUri = Uri.fromFile(outputImage);
+                        Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+                        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+                        startActivityForResult(intent,TAKE_PHOTO);
+                    }
+                }).show();
+    }
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        super.onActivityResult(requestCode,resultCode, data);
+        if (resultCode != Activity.RESULT_OK) {
+            Toast.makeText(CreateActivity.this, "ActivityResult " + resultCode + "error",
+                    Toast.LENGTH_SHORT).show();
+        }
+        try {
+            //图片解析成Bitmap对象
+            Bitmap bitmap = BitmapFactory.decodeStream(
+                    getContentResolver().openInputStream(imageUri));
+            cur_Point.img_address = imageUri.getPath();
+            Toast.makeText(CreateActivity.this, imageUri.getPath(), Toast.LENGTH_LONG).show();
+            imageView.setImageBitmap(bitmap); //将照片显示出来
+        } catch(FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
     public void position_get_click(View view) {
         if (!positioning){
             if (get_phone_param_done(cur_Point)){
                 new AlertDialog.Builder(this)
-                        .setMessage("要重新获取手机参数吗？")
+                        .setMessage("要重新获取任务点位置信息吗？")
                         .setNegativeButton("取消",null)
                         .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                             @Override
@@ -223,8 +292,6 @@ public class CreateActivity extends Activity {
                             }
                         }).show();
             }else {
-//            if(get_phone_param())
-//                p_get.setTextColor(Color.RED);
                 positioning = true;
                 get_phone_param();
             }
@@ -350,5 +417,4 @@ public class CreateActivity extends Activity {
         dmr.closeDB();
         super.onDestroy();
     }
-
 }

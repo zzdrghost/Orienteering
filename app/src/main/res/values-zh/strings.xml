@@ -26,5 +26,8 @@
     <string name="display_picture">显示一张图片</string>
     <string name="answer_question">回答问题获取提示</string>
     <string name="confirm_answer">确认答案</string>
+    <string name="before">上一个</string>
+    <string name="next">下一个</string>
+    <string name="locate">定位</string>
 
 </resources>

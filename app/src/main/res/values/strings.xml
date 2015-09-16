@@ -19,6 +19,9 @@
     <string name="insert_picture"> insert a picture</string>
     <string name="save">save</string>
     <string name="create_done">create done</string>
+    <string name="before">before</string>
+    <string name="next">next</string>
+    <string name="locate">locate</string>
 
     <!--MissionActivity-->
     <string name="title_activity_mission">MissionActivity</string>

@@ -1,7 +1,6 @@
 package com.exc.zhen.orienteering;
 
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -9,8 +8,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.HandlerThread;
-import android.os.Looper;
 import android.os.Message;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
@@ -27,7 +24,6 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.os.Handler;
-import android.os.Bundle;
 import android.widget.Toast;
 
 import com.tencent.map.geolocation.TencentLocation;
@@ -42,7 +38,6 @@ import com.tencent.mapsdk.raster.model.MarkerOptions;
 import com.tencent.tencentmap.mapsdk.map.MapView;
 import com.tencent.tencentmap.mapsdk.map.TencentMap;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,9 +60,9 @@ public class MainActivity extends Activity {
 
     private MapView mapView;
     private TencentMap tencentMap;
-    TencentLocationManager locationManager;
+    private TencentLocationManager locationManager;
     private Marker marker;
-    LatLng cur_position = null;
+    private LatLng cur_position = null;
     private MyBaseAdapter myBaseAdapter;
     private ListView mListView;
 
@@ -168,14 +163,6 @@ public class MainActivity extends Activity {
         //更新数据
         missionList = sortMissions(dmr.queryMission());
         currentMission = dmr.getCurrentMission();
-        if (null != currentMission){
-            cur_point = dmr.getCurrentPoint(currentMission.mission_id);
-            cmsPointList = dmr.queryMsPoint(currentMission.mission_id);
-        }else {
-            getUserPosition();
-            cur_point = null;
-            cmsPointList = null;
-        }
         myBaseAdapter = new MyBaseAdapter(getApplicationContext());
         mListView.setAdapter(myBaseAdapter);
         setListener();
@@ -280,37 +267,37 @@ public class MainActivity extends Activity {
         }
         return lms1;
     }
-    //TODO 测试数据
+    //测试数据
     private void initDbData(){
         if (IS_FIRST_RUN){
             dmr.clearData();
-            Mission ms = new Mission(1,"任务一","未完成","4小时","");
-            dmr.addMission(ms);
-            ms = new Mission(2,"任务二","已完成","4小时","");
-            dmr.addMission(ms);
-            ms = new Mission(3,"测试任务","进行中","4小时","10点30");
-            dmr.addMission(ms);
-            ms = new Mission(4,"任务四","创建中","4小时","");
-            dmr.addMission(ms);
-            List<MsPoint> mspl = new ArrayList<>();
-            MsPoint msp = new MsPoint(1,1,"未完成",27.2,130.4,10.5,"好?","好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(1,2,"未完成",30.2,130.4,10.5,"不好?","不好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(2,1,"已完成",47.2,130.4,10.5,"好?","好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(3,1,"已完成",30.545132,114.300299,10.5,"好?","好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(3,2,"未完成",30.547183,114.292724,10.5,"不好?","不好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(3,3,"未完成",30.558048,114.301221,10.5,"不好?","不好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(3,4,"未完成",30.560755,114.303249,10.5,"不好?","不好","",30);
-            mspl.add(msp);
-            msp = new MsPoint(4,1,"未完成",77.2,130.4,10.5,"不好?","不好","",30);
-            mspl.add(msp);
-            dmr.addPoint(mspl);
-            Log.i(TAG,"MainActivity 初始化测试数据");
+//            Mission ms = new Mission(1,"任务一","未完成","4小时","");
+//            dmr.addMission(ms);
+//            ms = new Mission(2,"任务二","已完成","4小时","");
+//            dmr.addMission(ms);
+//            ms = new Mission(3,"测试任务","进行中","4小时","10点30");
+//            dmr.addMission(ms);
+//            ms = new Mission(4,"任务四","创建中","4小时","");
+//            dmr.addMission(ms);
+//            List<MsPoint> mspl = new ArrayList<>();
+//            MsPoint msp = new MsPoint(1,1,"未完成",27.2,130.4,10.5,"好?","好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(1,2,"未完成",30.2,130.4,10.5,"不好?","不好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(2,1,"已完成",47.2,130.4,10.5,"好?","好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(3,1,"已完成",30.545132,114.300299,10.5,"好?","好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(3,2,"未完成",30.547183,114.292724,10.5,"不好?","不好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(3,3,"未完成",30.558048,114.301221,10.5,"不好?","不好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(3,4,"未完成",30.560755,114.303249,10.5,"不好?","不好","",30);
+//            mspl.add(msp);
+//            msp = new MsPoint(4,1,"未完成",77.2,130.4,10.5,"不好?","不好","",30);
+//            mspl.add(msp);
+//            dmr.addPoint(mspl);
+//            Log.i(TAG,"MainActivity 初始化测试数据");
         }
     }
 
@@ -382,7 +369,7 @@ public class MainActivity extends Activity {
         }.start();
     }
 
-    // TODO ListView 中某项任务被选中后的逻辑
+    //ListView 中某项任务被选中后的逻辑
     private void setListener(){
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -523,11 +510,11 @@ public class MainActivity extends Activity {
             }
             //Log.i("ListItem", Integer.toString(position));
             //Log.i("ListItem", mData.get(position).get("tv_mission_title"));
-            //TODO 设置当前itemView的内容
+            //设置当前itemView的内容
             holder.tv_mission_title.setText(missionList.get(position).name);
             holder.tv_mission_state.setText(missionList.get(position).state);
             holder.tv_last_time.setText(missionList.get(position).limit_time);
-            //TODO 设置当前convertView的布局
+            //设置当前convertView的布局
             switch (missionList.get(position).state){
                 case "已完成":{
                     convertView.setBackgroundResource(R.drawable.ms_comlete_bg);

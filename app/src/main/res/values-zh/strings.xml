@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">MY定向</string>
+    <string name="app_name">趣味定向</string>
     <string name="action_settings">设置</string>
-    <string name="tencentMapSDK_key">VXTBZ-6NBWQ-3MJ57-GCRHP-HGHIK-SQBCC</string>
+    <string name="BaiduMapSDK_key">VYQoC1NRUo5GoXf7tBLEK0Lv</string>
     <string name="title_activity_main">主界面</string>
     <string name="default_title">任务</string>
     <string name="default_state">已完成</string>

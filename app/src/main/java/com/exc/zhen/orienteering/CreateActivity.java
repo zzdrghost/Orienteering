@@ -26,10 +26,11 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.tencent.map.geolocation.TencentLocation;
-import com.tencent.map.geolocation.TencentLocationListener;
-import com.tencent.map.geolocation.TencentLocationManager;
-import com.tencent.map.geolocation.TencentLocationRequest;
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.mapapi.SDKInitializer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -53,8 +54,7 @@ public class CreateActivity extends Activity {
     private String imageName;
     public static final int TAKE_PHOTO = 1;
     public static final int CROP_PHOTO = 2;
-
-    private TencentLocationManager locationManager;
+    private LocationClient locationClient;
 
 //    private SensorManager sm;
 //    private Sensor aSensor,mSensor;
@@ -85,9 +85,11 @@ public class CreateActivity extends Activity {
 //        @Override
 //        public void onAccuracyChanged(Sensor sensor, int accuracy) { }
 //    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_create);
         Log.i(TAG, "CreateActivity onCreate");
         initData();
@@ -121,7 +123,7 @@ public class CreateActivity extends Activity {
             cur_PointList = new ArrayList<>();
             cur_Point.order_num = cur_PointList.size()+1;
         }
-        locationManager = TencentLocationManager.getInstance(this);
+
     }
 
     //绑定对应控件
@@ -138,51 +140,42 @@ public class CreateActivity extends Activity {
     }
 
     //获取手机参数
-    private void get_phone_param(){
-
-        TencentLocationRequest request = TencentLocationRequest.create();
-        request.setInterval(10);//设置定位周期（位置监听器回调周期），单位为ms（毫秒）
-        request.setRequestLevel(TencentLocationRequest.REQUEST_LEVEL_GEO);//设置定位的request level
-        request.setAllowDirection(true);//设置允许使用设备陀螺仪
-        request.setAllowCache(true);//设置是否允许使用缓存，连续多次定位时建议允许缓存
-        int error = locationManager.requestLocationUpdates(request, new TencentLocationListener() {
+    private void get_phone_param() {
+        locationClient = new LocationClient(this);
+        locationClient.registerLocationListener(new BDLocationListener() {
             @Override
-            public void onLocationChanged(TencentLocation tencentLocation, int i, String s) {
-                if (tencentLocation.ERROR_OK == i){
-                    cur_Point.latitude = tencentLocation.getLatitude();
-                    cur_Point.longitude = tencentLocation.getLongitude();
-                    cur_Point.height = tencentLocation.getAltitude();
-                    String key = TencentLocation.EXTRA_DIRECTION;
-                    cur_Point.orientation = tencentLocation.getExtra().getDouble(key);
-                    Toast.makeText(CreateActivity.this,"定位完成\n"+Double.toString(cur_Point.latitude)
-                            +","+Double.toString(cur_Point.longitude)+"\n"+Double.toString(cur_Point.height)
-                            +","+cur_Point.orientation,Toast.LENGTH_SHORT).show();
+            public void onReceiveLocation(BDLocation bdLocation) {
+                if (null != bdLocation) {
+                    cur_Point.latitude = bdLocation.getLatitude();
+                    cur_Point.longitude = bdLocation.getLongitude();
+                    cur_Point.height = bdLocation.getAltitude();
+                    Toast.makeText(CreateActivity.this, "定位完成\n" + cur_Point.latitude
+                            + "," + cur_Point.longitude + "\n" + cur_Point.height, Toast.LENGTH_LONG).show();
                     p_get.setTextColor(Color.RED);
                     param_get = true;//判断定位成功
                     positioning = false;//定位结束
-                }else{
+                } else {
                     p_get.setTextColor(Color.BLACK);
                     param_get = false;
-                    Toast.makeText(CreateActivity.this,s+"导致定位失败，重新定位",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateActivity.this, "定位失败，请重新定位", Toast.LENGTH_SHORT).show();
                     positioning = false;
                 }
-                locationManager.removeUpdates(this);
+                locationClient.unRegisterLocationListener(this);
+                locationClient.stop();
             }
-
-            @Override
-            public void onStatusUpdate(String s, int i, String s1) {
-
-            }
-        });//注册位置监听器
-        if (error == 0) {
-            Toast.makeText(CreateActivity.this,"正在定位，请稍后！",Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(CreateActivity.this,"定位失败 "+error,Toast.LENGTH_SHORT).show();
-        }
+        });
+        LocationClientOption locateOption = new LocationClientOption();
+        locateOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        locateOption.setCoorType("bd09ll");
+        locateOption.setNeedDeviceDirect(true);
+        locateOption.setScanSpan(10);
+        locationClient.setLocOption(locateOption);
+        locationClient.start();
+        locationClient.requestLocation();
     }
     // 判断当前point是否成功获取有效手机参数
     private boolean get_phone_param_done(MsPoint msp){
-        return (!(msp.latitude == 0.0 || msp.longitude == 0.0 || msp.orientation == -1) && param_get);
+        return (!(msp.latitude == 0.0 || msp.longitude == 0.0) && param_get);
     }
     // 判断当前point是否可以保存
     private boolean isValidPoint(MsPoint msp){
@@ -266,6 +259,7 @@ public class CreateActivity extends Activity {
         if (resultCode != Activity.RESULT_OK) {
             Toast.makeText(CreateActivity.this, "ActivityResult " + resultCode + "error",
                     Toast.LENGTH_SHORT).show();
+            return;
         }
         try {
             //图片解析成Bitmap对象

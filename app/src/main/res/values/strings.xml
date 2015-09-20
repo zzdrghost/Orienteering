@@ -2,7 +2,7 @@
     <!--MainActivity-->
     <string name="app_name">Orienteering</string>
     <string name="action_settings">Settings</string>
-    <string name="tencentMapSDK_key">VXTBZ-6NBWQ-3MJ57-GCRHP-HGHIK-SQBCC</string>
+    <string name="BaiduMapSDK_key">VYQoC1NRUo5GoXf7tBLEK0Lv</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="menu_title_main"> </string>
     <string name="default_title">MISSION</string>

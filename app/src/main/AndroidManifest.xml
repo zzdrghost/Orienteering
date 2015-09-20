@@ -41,8 +41,8 @@
         android:label="@string/app_name"
         android:theme="@style/CustomTheme" >
         <meta-data
-            android:name="TencentMapSDK"
-            android:value="@string/tencentMapSDK_key" />
+            android:name="com.baidu.lbsapi.API_KEY"
+            android:value="@string/BaiduMapSDK_key" />
 
         <activity
             android:name=".MainActivity"

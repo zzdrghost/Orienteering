@@ -21,12 +21,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.tencent.map.geolocation.TencentLocation;
-import com.tencent.map.geolocation.TencentLocationListener;
-import com.tencent.map.geolocation.TencentLocationManager;
-import com.tencent.map.geolocation.TencentLocationRequest;
-import com.tencent.map.geolocation.TencentLocationUtils;
-import com.tencent.mapsdk.raster.model.BitmapDescriptorFactory;
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.mapapi.SDKInitializer;
+import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.utils.DistanceUtil;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -46,7 +47,7 @@ public class MissionActivity extends Activity {
     private Button p_confirm;
     private ImageView imageView;
     private String mission_cnt_str;
-    private TencentLocationManager locationManager;
+    private LocationClient locationClient;
     private double latitude,longitude,height;
     private double orientation;
     private boolean positioning = false;
@@ -55,6 +56,7 @@ public class MissionActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_mission);
         Log.i(TAG, "MissionActivity onCreate");
         initData();
@@ -78,7 +80,6 @@ public class MissionActivity extends Activity {
                 answers_done.add(false);
         }
         cur_Point = dmr.getCurrentPoint(cur_msid);
-        locationManager = TencentLocationManager.getInstance(this);
     }
 
     //绑定对应控件
@@ -97,7 +98,7 @@ public class MissionActivity extends Activity {
             answer.setText(cur_Point.answer);
             displayImg(cur_Point);
         }else {
-            imageView.setImageBitmap(BitmapDescriptorFactory.fromAsset("hint.png").getBitmap());
+            imageView.setImageBitmap(null);
         }
         p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
 
@@ -112,34 +113,28 @@ public class MissionActivity extends Activity {
 
     //TODO 确认位置等手机参数正确
     private void confirm_position(){
-        TencentLocationRequest request = TencentLocationRequest.create();
-        request.setInterval(10);//设置定位周期（位置监听器回调周期），单位为ms（毫秒）
-        request.setRequestLevel(TencentLocationRequest.REQUEST_LEVEL_GEO);//设置定位的request level
-        request.setAllowDirection(true);//设置允许使用设备陀螺仪
-        request.setAllowCache(true);//设置是否允许使用缓存，连续多次定位时建议允许缓存
-        int error = locationManager.requestLocationUpdates(request, new TencentLocationListener() {
+        locationClient = new LocationClient(this);
+        locationClient.registerLocationListener(new BDLocationListener() {
             @Override
-            public void onLocationChanged(TencentLocation tencentLocation, int i, String s) {
-                if (tencentLocation.ERROR_OK == i){
+            public void onReceiveLocation(BDLocation bdLocation) {
+                if (null != bdLocation){
                     boolean FoundPoint = true;
-                    latitude = tencentLocation.getLatitude();
-                    longitude = tencentLocation.getLongitude();
-                    height = tencentLocation.getAltitude();
-                    String key = TencentLocation.EXTRA_DIRECTION;
-                    orientation = tencentLocation.getExtra().getDouble(key);
+                    latitude = bdLocation.getLatitude();
+                    longitude = bdLocation.getLongitude();
+                    height = bdLocation.getAltitude();
 
 //                    if (0.003 < Math.abs(latitude-cur_Point.latitude)) FoundPoint = false;
 //                    if (0.003 < Math.abs(longitude-cur_Point.longitude)) FoundPoint = false;
 //                    TODO 定位数据与任务数据比较
 
-                    double distance = TencentLocationUtils.distanceBetween(latitude,longitude,
-                            cur_Point.latitude,cur_Point.longitude);
+                    double distance = DistanceUtil.getDistance(new LatLng(latitude, longitude),
+                            new LatLng(cur_Point.latitude,cur_Point.longitude));
                     new AlertDialog.Builder(MissionActivity.this)
                             .setMessage(cur_Point.latitude + "," + cur_Point.longitude
                                     + "\n" + latitude + "," + longitude
                                     +"\n"+distance+"\n"+cur_Point.orientation+"\n"+orientation).show();
                     if (25 < distance) FoundPoint = false;
-                    if (2 < Math.abs(orientation-cur_Point.orientation)) FoundPoint = false;
+//                    if (5 < Math.abs(orientation-cur_Point.orientation)) FoundPoint = false;
                     if (FoundPoint){
                         p_confirm.setTextColor(Color.RED);
                         cur_Point.state = "已完成";
@@ -160,24 +155,24 @@ public class MissionActivity extends Activity {
                         Toast.makeText(MissionActivity.this,"不是这儿~",Toast.LENGTH_SHORT).show();
                     }
                     positioning = false;//判断定位结束
-                }else{
+
+                }else {
                     p_confirm.setTextColor(Color.BLACK);
-                    Toast.makeText(MissionActivity.this,s+"导致定位失败，重新定位",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MissionActivity.this,"定位失败，请重新定位",Toast.LENGTH_SHORT).show();
                     positioning = false;
                 }
-                locationManager.removeUpdates(this);
+                locationClient.unRegisterLocationListener(this);
+                locationClient.stop();
             }
-
-            @Override
-            public void onStatusUpdate(String s, int i, String s1) {
-
-            }
-        });//注册位置监听器
-        if (error == 0) {
-            Toast.makeText(MissionActivity.this,"正在定位，请稍后！",Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(MissionActivity.this,"定位失败 "+error,Toast.LENGTH_SHORT).show();
-        }
+        });
+        LocationClientOption locateOption = new LocationClientOption();
+        locateOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        locateOption.setCoorType("bd09ll");
+        locateOption.setNeedDeviceDirect(true);
+        locateOption.setScanSpan(10);
+        locationClient.setLocOption(locateOption);
+        locationClient.start();
+        locationClient.requestLocation();
     }
     //将当前点数据赋给View
     private void setCurP2View(MsPoint msp){
@@ -235,7 +230,7 @@ public class MissionActivity extends Activity {
                         p_confirm.setText(Integer.toString(cur_Point.order_num) + mission_cnt_str);
                         p_confirm.setTextColor(Color.BLACK);
                         //设置为空图片
-                        imageView.setImageBitmap(BitmapDescriptorFactory.fromAsset("hint.png").getBitmap());
+                        imageView.setImageBitmap(null);
                     }
                 }
             }else

@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Message;
 import android.support.v4.view.PagerAdapter;
@@ -26,17 +27,23 @@ import android.widget.TextView;
 import android.os.Handler;
 import android.widget.Toast;
 
-import com.tencent.map.geolocation.TencentLocation;
-import com.tencent.map.geolocation.TencentLocationListener;
-import com.tencent.map.geolocation.TencentLocationManager;
-import com.tencent.map.geolocation.TencentLocationRequest;
-import com.tencent.mapsdk.raster.model.BitmapDescriptorFactory;
-import com.tencent.mapsdk.raster.model.LatLng;
-import com.tencent.mapsdk.raster.model.LatLngBounds;
-import com.tencent.mapsdk.raster.model.Marker;
-import com.tencent.mapsdk.raster.model.MarkerOptions;
-import com.tencent.tencentmap.mapsdk.map.MapView;
-import com.tencent.tencentmap.mapsdk.map.TencentMap;
+import com.baidu.location.LocationClientOption;
+import com.baidu.mapapi.SDKInitializer;
+import com.baidu.mapapi.map.BitmapDescriptor;
+import com.baidu.mapapi.map.MapStatus;
+import com.baidu.mapapi.map.MapStatusUpdate;
+import com.baidu.mapapi.map.MapStatusUpdateFactory;
+import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.mapapi.map.BitmapDescriptorFactory;
+import com.baidu.mapapi.map.Marker;
+import com.baidu.mapapi.map.MarkerOptions;
+import com.baidu.mapapi.map.Overlay;
+import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.model.LatLngBounds;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +58,10 @@ public class MainActivity extends Activity {
     private final static int myIndicatorColor = Color.parseColor("#D1EEEE");
     private final static int myDividerColor = Color.parseColor("#DEDEDE");
     private final static String[] tabTitles = {"地图","任务"};
+
+    private BitmapDescriptor failedBit = BitmapDescriptorFactory.fromAsset("failed_point.png");
+    private BitmapDescriptor completeBit = BitmapDescriptorFactory.fromAsset("complete_point.png");
+    private BitmapDescriptor inBit = BitmapDescriptorFactory.fromAsset("in_point.png");
     //TODO 优化数据结构
     private View view1,view2;
     private List<View> viewList;
@@ -59,9 +70,9 @@ public class MainActivity extends Activity {
     private MyPageAdapter myPageAdapter;
 
     private MapView mapView;
-    private TencentMap tencentMap;
-    private TencentLocationManager locationManager;
-    private Marker marker;
+    private BaiduMap baiduMap;
+    private LocationClient locationClient;
+    private Overlay marker;
     private LatLng cur_position = null;
     private MyBaseAdapter myBaseAdapter;
     private ListView mListView;
@@ -82,7 +93,7 @@ public class MainActivity extends Activity {
             switch (msg.what){
                 case UPDATE_DONE:{
                     myBaseAdapter.notifyDataSetChanged();
-                    tencentMap.clearAllOverlays();
+                    baiduMap.clear();
                     Toast.makeText(MainActivity.this,"任务进行中",Toast.LENGTH_SHORT).show();
                     addMarkers();
                     break;
@@ -97,6 +108,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext());
         Log.i(TAG, "MainActivity onCreate");
         setContentView(R.layout.activity_main);
         //初始化ViewPager
@@ -112,8 +124,6 @@ public class MainActivity extends Activity {
         initOtherView();
         //添加当前任务标注
         addMarkers();
-        //保存地图状态
-        mapView.onCreate(savedInstanceState);
     }
     //TODO 优化标签布局
     private void initViewPager(){
@@ -156,8 +166,7 @@ public class MainActivity extends Activity {
     private void initOtherView(){
         //获取mapview
         mapView = (MapView) view1.findViewById(R.id.mapview);
-        tencentMap = mapView.getMap();
-        locationManager = TencentLocationManager.getInstance(MainActivity.this);
+        baiduMap = mapView.getMap();
         //获取view2中的控件
         mListView = (ListView) view2.findViewById(R.id.mListView);
         //更新数据
@@ -169,36 +178,27 @@ public class MainActivity extends Activity {
     }
     //获取用户当前位置
     private void getUserPosition() {
-        TencentLocationRequest request = TencentLocationRequest.create();
-        request.setAllowDirection(true);
-        request.setAllowCache(true);
-        request.setInterval(10);
-        request.setRequestLevel(0);
-        int error = locationManager.requestLocationUpdates(request, new TencentLocationListener() {
+        locationClient = new LocationClient(this);
+        locationClient.registerLocationListener(new BDLocationListener() {
             @Override
-            public void onLocationChanged(TencentLocation tencentLocation, int i, String s) {
-                if (tencentLocation.ERROR_OK == 0) {
-                    cur_position = new LatLng(tencentLocation.getLatitude(),
-                            tencentLocation.getLongitude());
-                    tencentMap.animateTo(cur_position);
-                    tencentMap.setZoom(12);
-                    Toast.makeText(MainActivity.this,"定位完成",Toast.LENGTH_SHORT).show();
-                }else {
-                    Toast.makeText(MainActivity.this,"定位失败 "+s,Toast.LENGTH_SHORT).show();
-                }
-                locationManager.removeUpdates(this);
-            }
-
-            @Override
-            public void onStatusUpdate(String s, int i, String s1) {
-
+            public void onReceiveLocation(BDLocation bdLocation) {
+                if (bdLocation == null)
+                    return;
+                cur_position = new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude());
+                MapStatusUpdate mapStatusUpdate = MapStatusUpdateFactory.newLatLngZoom(cur_position,19);
+                baiduMap.setMapStatus(mapStatusUpdate);
+                Toast.makeText(MainActivity.this, "定位完成", Toast.LENGTH_SHORT).show();
+                locationClient.unRegisterLocationListener(this);
+                locationClient.stop();
             }
         });
-        if (0 == error) {
-            Toast.makeText(MainActivity.this,"正在定位",Toast.LENGTH_SHORT).show();
-        }else {
-            Toast.makeText(MainActivity.this,"定位失败",Toast.LENGTH_SHORT).show();
-        }
+        LocationClientOption locateOption = new LocationClientOption();
+        locateOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        locateOption.setCoorType("bd09ll");
+        locateOption.setScanSpan(10);
+        locationClient.setLocOption(locateOption);
+        locationClient.start();
+        locationClient.requestLocation();
     }
 
     //添加地图标注
@@ -210,39 +210,37 @@ public class MainActivity extends Activity {
                 llbb.include(point);
                 switch (msp.state){
                     case "已完成":{
-                        marker = tencentMap.addMarker(new MarkerOptions()
+                        marker = baiduMap.addOverlay(new MarkerOptions()
                                 .title("已完成")
                                 .position(point)
                                 .anchor(0.5f, 1f)
-                                .icon(BitmapDescriptorFactory.fromAsset("complete_point.png"))
+                                .icon(completeBit)
                                 .draggable(false));
                         break;
                     }
                     case "未完成":{
-                        marker = tencentMap.addMarker(new MarkerOptions()
+                        marker = baiduMap.addOverlay(new MarkerOptions()
                                 .title("未完成")
                                 .position(point)
                                 .anchor(0.5f, 1f)
-                                .icon(BitmapDescriptorFactory.fromAsset("failed_point.png"))
+                                .icon(failedBit)
                                 .draggable(false));
                         break;
                     }default:{break;}
                 }
                 if (null != cur_point && msp.order_num == cur_point.order_num){
                     marker.remove();
-                    marker = tencentMap.addMarker(new MarkerOptions()
+                    marker = baiduMap.addOverlay(new MarkerOptions()
                             .title("进行中")
                             .position(point)
                             .anchor(0.5f, 1f)
-                            .icon(BitmapDescriptorFactory.fromAsset("in_point.png"))
+                            .icon(inBit)
                             .draggable(false));
                 }
             }
             LatLngBounds llb = llbb.build();
-            tencentMap.zoomToSpan(llb.getSouthwest(), llb.getNortheast());
-//            if (null != cur_point){
-//                tencentMap.animateTo(new LatLng(cur_point.latitude,cur_point.longitude));
-//            }
+            MapStatusUpdate mapStatusUpdate = MapStatusUpdateFactory.newLatLngBounds(llb);
+            baiduMap.setMapStatus(mapStatusUpdate);
         }
     }
     //排序查询得到的任务列表
@@ -359,7 +357,7 @@ public class MainActivity extends Activity {
                         @Override
                         public void run() {
                             myBaseAdapter.notifyDataSetChanged();
-                            tencentMap.clearAllOverlays();
+                            baiduMap.clear();
                             addMarkers();
                             getUserPosition();
                         }
@@ -608,7 +606,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onRestart(){
         Log.i(TAG, "MainActivity onRestart");
-        mapView.onRestart();
         super.onRestart();
     }
     @Override
@@ -627,7 +624,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onStop() {
         Log.i(TAG, "MainActivity onStop");
-        mapView.onStop();
         super.onStop();
         //创建Settings.xml中的first_run
         SharedPreferences settings = getSharedPreferences(PREFS_NAME,MODE_PRIVATE);
@@ -639,9 +635,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         Log.i(TAG, "MainActivity onDestroy");
-        tencentMap.clearCache();
         mapView.onDestroy();
         super.onDestroy();
+        inBit.recycle();
+        failedBit.recycle();
+        completeBit.recycle();
         dmr.closeDB();
     }
 }

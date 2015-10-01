@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Message;
 import android.support.v4.view.PagerAdapter;
@@ -30,7 +29,6 @@ import android.widget.Toast;
 import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BitmapDescriptor;
-import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
@@ -39,7 +37,6 @@ import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;
-import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.Overlay;
 import com.baidu.mapapi.model.LatLng;
@@ -64,10 +61,10 @@ public class MainActivity extends Activity {
     private BitmapDescriptor inBit = BitmapDescriptorFactory.fromAsset("in_point.png");
     //TODO 优化数据结构
     private View view1,view2;
-    private List<View> viewList;
+    List<View> viewList;
     private ViewPager pager ;
-    private SlidingTabLayout tabLayout;
-    private MyPageAdapter myPageAdapter;
+    SlidingTabLayout tabLayout;
+    MyPageAdapter myPageAdapter;
 
     private MapView mapView;
     private BaiduMap baiduMap;
@@ -84,10 +81,8 @@ public class MainActivity extends Activity {
     private MsPoint cur_point = null;
 
     private final static int UPDATE_DONE = 1;
-    private final static int LOCATE_DONE = 2;
 
-
-    private Handler handler = new Handler(){
+    private class  MyHandler extends Handler{
         @Override
         public void handleMessage(Message msg){
             switch (msg.what){
@@ -101,8 +96,8 @@ public class MainActivity extends Activity {
                 default:{break;}
             }
         }
-    };
-
+    }
+    MyHandler handler = new MyHandler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,7 +159,7 @@ public class MainActivity extends Activity {
     }
     //TODO 优化初始化结构
     private void initOtherView(){
-        //获取mapview
+        //获取mapView
         mapView = (MapView) view1.findViewById(R.id.mapview);
         baiduMap = mapView.getMap();
         //获取view2中的控件

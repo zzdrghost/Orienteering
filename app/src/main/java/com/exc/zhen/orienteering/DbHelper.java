@@ -29,7 +29,7 @@ public class DbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         //第一次建库时创建mission表和point表
         db.execSQL("CREATE TABLE IF NOT EXISTS mission " +
-                "(mission_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "(mission_id INTEGER PRIMARY KEY, " +
                 "name TEXT, " +
                 "state TEXT, " +
                 "limit_time TEXT, " +

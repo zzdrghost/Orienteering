@@ -1,7 +1,7 @@
 <resources>
     <!--MainActivity-->
     <string name="app_name">Orienteering</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_synchronize">synchronize</string>
     <string name="BaiduMapSDK_key">VYQoC1NRUo5GoXf7tBLEK0Lv</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="menu_title_main"> </string>

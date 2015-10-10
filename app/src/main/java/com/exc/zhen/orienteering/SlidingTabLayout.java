@@ -251,7 +251,6 @@ public class SlidingTabLayout extends HorizontalScrollView {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-
         if (mViewPager != null) {
             scrollToTab(mViewPager.getCurrentItem(), 0);
         }

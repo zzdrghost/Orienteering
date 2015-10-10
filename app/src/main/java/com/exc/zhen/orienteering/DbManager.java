@@ -26,17 +26,17 @@ public class DbManager {
      * @param ms 待添加的任务*/
     public void addMission(Mission ms){
         Cursor c = db.rawQuery("SELECT * FROM mission WHERE mission_id = ?",
-                new String[]{Integer.toString(ms.mission_id)});
+                new String[]{Integer.toString(ms.missionId)});
         c.moveToFirst();
         if (c.isAfterLast()){
             db.execSQL("INSERT INTO mission (name,state,limit_time) " +
-                    "VALUES(?,?,?)", new Object[]{ms.name, ms.state, ms.limit_time});
+                    "VALUES(?,?,?)", new Object[]{ms.name, ms.state, ms.limitTime});
         }else {
             ContentValues cv = new ContentValues();
             cv.put("name", ms.name);
             cv.put("state", ms.state);
-            cv.put("limit_time", ms.limit_time);
-            db.update("mission", cv, "mission_id=?", new String[]{Integer.toString(ms.mission_id)});
+            cv.put("limit_time", ms.limitTime);
+            db.update("mission", cv, "mission_id=?", new String[]{Integer.toString(ms.missionId)});
         }
         c.close();
         //Log.i("MyDebug", "DbManager 添加任务");
@@ -49,13 +49,13 @@ public class DbManager {
         try {
             for (MsPoint msP : msPs) {
                 Cursor c = db.rawQuery("SELECT * FROM ms_point WHERE mission_id = ? AND order_num = ?",
-                        new String[]{Integer.toString(msP.mission_id),Integer.toString(msP.order_num)});
+                        new String[]{Integer.toString(msP.missionId),Integer.toString(msP.orderNum)});
                 c.moveToFirst();
                 if (c.isAfterLast()){
                     db.execSQL("INSERT INTO ms_point (mission_id,order_num,state,latitude,longitude," +
                                     "height,question,answer,img_address,orientation) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                            new Object[]{msP.mission_id,msP.order_num,msP.state,msP.latitude,msP.longitude,
-                                    msP.height,msP.question,msP.answer, msP.img_address,msP.orientation});
+                            new Object[]{msP.missionId,msP.orderNum,msP.state,msP.latitude,msP.longitude,
+                                    msP.height,msP.question,msP.answer, msP.imgAddress,msP.orientation});
 //                    Log.i("MyDebug", "DbManager 添加任务点");
                 }else {
                     ContentValues cv = new ContentValues();
@@ -64,10 +64,10 @@ public class DbManager {
                     cv.put("height",msP.height);
                     cv.put("question",msP.question);
                     cv.put("answer",msP.answer);
-                    cv.put("img_address",msP.img_address);
+                    cv.put("img_address",msP.imgAddress);
                     cv.put("orientation",msP.orientation);
                     db.update("ms_point", cv, "mission_id=? AND order_num=?", new String[]{
-                            Integer.toString(msP.mission_id), Integer.toString(msP.order_num)});
+                            Integer.toString(msP.missionId), Integer.toString(msP.orderNum)});
                 }
                 c.close();
             }
@@ -86,7 +86,7 @@ public class DbManager {
         ContentValues cv = new ContentValues();
         cv.put("state", msP.state);
         db.update("ms_point", cv, "mission_id=? AND order_num=?", new String[]{
-                Integer.toString(msP.mission_id), Integer.toString(msP.order_num)});
+                Integer.toString(msP.missionId), Integer.toString(msP.orderNum)});
         Log.i("MyDebug", "DbManager 更新任务点状态");
     }
     /**根据待更新任务的状态更新任务表
@@ -94,26 +94,22 @@ public class DbManager {
     public void updateMissionState(Mission ms){
         ContentValues cv = new ContentValues();
         cv.put("state", ms.state);
-        cv.put("start_time", ms.start_time);
-        db.update("mission", cv, "mission_id=?", new String[]{Integer.toString(ms.mission_id)});
+        cv.put("start_time", ms.startTime);
+        db.update("mission", cv, "mission_id=?", new String[]{Integer.toString(ms.missionId)});
         if("进行中".equals(ms.state)){
             cv = new ContentValues();
             cv.put("state","未完成");
-            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.mission_id)});
-//            cv = new ContentValues();
-//            cv.put("state","进行中");
-//            db.update("ms_point", cv, "mission_id=? AND order_num=?",
-//                    new String[]{Integer.toString(ms.mission_id),"1"});
+            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.missionId)});
         }
         if("未完成".equals(ms.state)){
             cv = new ContentValues();
             cv.put("state","未完成");
-            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.mission_id)});
+            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.missionId)});
         }
         if("已完成".equals(ms.state)){
             cv = new ContentValues();
             cv.put("state","已完成");
-            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.mission_id)});
+            db.update("ms_point", cv, "mission_id=?", new String[]{Integer.toString(ms.missionId)});
         }
         Log.i("MyDebug", "DbManager 根据待更新任务的状态更新任务表");
     }
@@ -124,11 +120,11 @@ public class DbManager {
         c.moveToFirst();
         while (!c.isAfterLast()){
             Mission mission = new Mission();
-            mission.mission_id = c.getInt(0);
+            mission.missionId = c.getInt(0);
             mission.name = c.getString(1);
             mission.state = c.getString(2);
-            mission.limit_time = c.getString(3);
-            mission.start_time = c.getString(4);
+            mission.limitTime = c.getString(3);
+            mission.startTime = c.getString(4);
             missions.add(mission);
             c.moveToNext();
         }
@@ -145,11 +141,11 @@ public class DbManager {
         if (!c.isAfterLast()){
             c.moveToFirst();
             Mission mission = new Mission();
-            mission.mission_id = c.getInt(0);
+            mission.missionId = c.getInt(0);
             mission.name = c.getString(1);
             mission.state = c.getString(2);
-            mission.limit_time = c.getString(3);
-            mission.start_time = c.getString(4);
+            mission.limitTime = c.getString(3);
+            mission.startTime = c.getString(4);
             c.close();
             return mission;
         }else {
@@ -159,15 +155,15 @@ public class DbManager {
     }
     /**查询任务表，返回最后一个mission*/
     public Mission getLastMission(){
-        Cursor c = db.rawQuery("SELECT * FROM mission",null);
+        Cursor c = db.rawQuery("SELECT * FROM mission ORDER BY mission_id",null);
         if (!c.isAfterLast()){
             c.moveToLast();
             Mission mission = new Mission();
-            mission.mission_id = c.getInt(0);
+            mission.missionId = c.getInt(0);
             mission.name = c.getString(1);
             mission.state = c.getString(2);
-            mission.limit_time = c.getString(3);
-            mission.start_time = c.getString(4);
+            mission.limitTime = c.getString(3);
+            mission.startTime = c.getString(4);
             c.close();
             return mission;
         }else {
@@ -181,11 +177,11 @@ public class DbManager {
         if (!c.isAfterLast()){
             c.moveToLast();
             Mission mission = new Mission();
-            mission.mission_id = c.getInt(0);
+            mission.missionId = c.getInt(0);
             mission.name = c.getString(1);
             mission.state = c.getString(2);
-            mission.limit_time = c.getString(3);
-            mission.start_time = c.getString(4);
+            mission.limitTime = c.getString(3);
+            mission.startTime = c.getString(4);
             c.close();
             return mission;
         }else {
@@ -203,15 +199,15 @@ public class DbManager {
         c.moveToFirst();
         while (!c.isAfterLast()){
             MsPoint mspoint = new MsPoint();
-            mspoint.mission_id = c.getInt(0);
-            mspoint.order_num = c.getInt(1);
+            mspoint.missionId = c.getInt(0);
+            mspoint.orderNum = c.getInt(1);
             mspoint.state = c.getString(2);
             mspoint.latitude = c.getDouble(3);
             mspoint.longitude = c.getDouble(4);
             mspoint.height = c.getDouble(5);
             mspoint.question = c.getString(6);
             mspoint.answer = c.getString(7);
-            mspoint.img_address = c.getString(8);
+            mspoint.imgAddress = c.getString(8);
             mspoint.orientation = c.getDouble(9);
             msPoints.add(mspoint);
             c.moveToNext();
@@ -232,15 +228,15 @@ public class DbManager {
         c.moveToFirst();
         MsPoint mspoint = new MsPoint();
         if (!c.isAfterLast()){
-            mspoint.mission_id = c.getInt(0);
-            mspoint.order_num = c.getInt(1);
+            mspoint.missionId = c.getInt(0);
+            mspoint.orderNum = c.getInt(1);
             mspoint.state = c.getString(2);
             mspoint.latitude = c.getDouble(3);
             mspoint.longitude = c.getDouble(4);
             mspoint.height = c.getDouble(5);
             mspoint.question = c.getString(6);
             mspoint.answer = c.getString(7);
-            mspoint.img_address = c.getString(8);
+            mspoint.imgAddress = c.getString(8);
             mspoint.orientation = c.getDouble(9);
             c.close();
             return mspoint;
@@ -251,9 +247,9 @@ public class DbManager {
     }
     //清空db中的数据
     public void clearData(){
-        Log.i("MyDebug", "DbManager 清空数据表！！");
+        Log.i("MyDebug", "DbManager 清空数据！！");
         db.execSQL("DELETE FROM mission");
-        db.execSQL("UPDATE sqlite_sequence SET seq=0 WHERE name='mission'");
+        //db.execSQL("UPDATE sqlite_sequence SET seq=0 WHERE name='mission'");
         db.execSQL("DELETE FROM ms_point");
     }
     /**关闭db*/

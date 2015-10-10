@@ -8,9 +8,9 @@
         android:orderInCategory="1"
         app:showAsAction="ifRoom|withText"/>
 
-    <item android:id="@+id/action_settings"
+    <item android:id="@+id/action_synchronize"
         android:icon="@mipmap/ic_action_settings"
-        android:title="@string/action_settings"
+        android:title="@string/action_synchronize"
         android:orderInCategory="100"
         app:showAsAction="never|withText" />
 

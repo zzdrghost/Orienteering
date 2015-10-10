@@ -36,6 +36,8 @@ import java.util.List;
 
 public class MissionActivity extends Activity {
     private final static String TAG = "MyDebug";
+    private final static String savePath = Environment.getExternalStorageDirectory().
+            getPath()+"/orienteeringImg/";
     private int cur_msid;
     private Mission cur_Mission;
     private List<MsPoint> cur_PointList;
@@ -48,8 +50,7 @@ public class MissionActivity extends Activity {
     private ImageView imageView;
     private String mission_cnt_str;
     private LocationClient locationClient;
-    private double latitude,longitude,height;
-    private double orientation;
+    private double latitude,longitude,height,orientation;
     private boolean positioning = false;
 
 
@@ -94,21 +95,23 @@ public class MissionActivity extends Activity {
 
         mission_title.setText(cur_Mission.name);
         question.setText(cur_Point.question);
-        if (answers_done.get(cur_Point.order_num-1)){
+        if (answers_done.get(cur_Point.orderNum-1)){
             answer.setText(cur_Point.answer);
             displayImg(cur_Point);
         }else {
             imageView.setImageBitmap(null);
         }
-        p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
+        p_confirm.setText(String.format("%s%s", cur_Point.orderNum, mission_cnt_str));
 
     }
     private void displayImg(MsPoint msp){
         //图片解析成Bitmap对象
         BitmapFactory.Options bitmapOption = new BitmapFactory.Options();
         bitmapOption.inSampleSize = 4;
-        Bitmap bitmap = BitmapFactory.decodeFile(msp.img_address,bitmapOption);
-        imageView.setImageBitmap(bitmap);
+        if (!"".equals(msp.imgAddress)){
+            Bitmap bitmap = BitmapFactory.decodeFile(savePath+msp.imgAddress,bitmapOption);
+            imageView.setImageBitmap(bitmap);
+        }
     }
 
     //TODO 确认位置等手机参数正确
@@ -123,8 +126,6 @@ public class MissionActivity extends Activity {
                     longitude = bdLocation.getLongitude();
                     height = bdLocation.getAltitude();
 
-//                    if (0.003 < Math.abs(latitude-cur_Point.latitude)) FoundPoint = false;
-//                    if (0.003 < Math.abs(longitude-cur_Point.longitude)) FoundPoint = false;
 //                    TODO 定位数据与任务数据比较
 
                     double distance = DistanceUtil.getDistance(new LatLng(latitude, longitude),
@@ -139,15 +140,15 @@ public class MissionActivity extends Activity {
                         p_confirm.setTextColor(Color.RED);
                         cur_Point.state = "已完成";
                         dmr.updatePointState(cur_Point);
-                        cur_PointList.set(cur_Point.order_num-1,cur_Point);
-                        answers_done.set(cur_Point.order_num-1,true);
-                        if (answers_done.get(cur_Point.order_num-1)){
+                        cur_PointList.set(cur_Point.orderNum-1,cur_Point);
+                        answers_done.set(cur_Point.orderNum-1,true);
+                        if (answers_done.get(cur_Point.orderNum-1)){
                             answer.setText(cur_Point.answer);
                             displayImg(cur_Point);
                         }
-                        if (cur_Point.order_num == cur_PointList.size()){
+                        if (cur_Point.orderNum == cur_PointList.size()){
                             cur_Mission.state = "已完成";
-                            cur_Mission.start_time = "";
+                            cur_Mission.startTime = "";
                             dmr.updateMissionState(cur_Mission);
                             Toast.makeText(MissionActivity.this,"恭喜！任务点全部完成！",Toast.LENGTH_SHORT).show();
                         }else {Toast.makeText(MissionActivity.this,"找到了！快去找下一个点吧！~",Toast.LENGTH_SHORT).show();}
@@ -178,13 +179,13 @@ public class MissionActivity extends Activity {
     private void setCurP2View(MsPoint msp){
         question.setText(msp.question);
         answer.setText(msp.answer);
-        p_confirm.setText(Integer.toString(msp.order_num)+mission_cnt_str);
+        p_confirm.setText(String.format("%s%s", msp.orderNum, mission_cnt_str));
         p_confirm.setTextColor(Color.RED);
         displayImg(msp);
     }
     public void confirm_answer_click(View view) {
         if (answer.getText().toString().equals(cur_Point.answer)){
-            answers_done.set(cur_Point.order_num-1,true);
+            answers_done.set(cur_Point.orderNum-1,true);
             displayImg(cur_Point);
             Toast.makeText(this,"答案正确",Toast.LENGTH_SHORT).show();
         }else
@@ -193,8 +194,8 @@ public class MissionActivity extends Activity {
 
     public void point_before_m_click(View view) {
         if (!positioning){
-            if (cur_Point.order_num-1 != 0){
-                cur_Point = cur_PointList.get(cur_Point.order_num-2);
+            if (cur_Point.orderNum-1 != 0){
+                cur_Point = cur_PointList.get(cur_Point.orderNum-2);
                 setCurP2View(cur_Point);
             }
         }
@@ -212,22 +213,22 @@ public class MissionActivity extends Activity {
     public void point_next_m_click(View view) {
         if (!positioning){
             if ("已完成".equals(cur_Point.state)){
-                if (cur_Point.order_num+1 > cur_PointList.size()){
+                if (cur_Point.orderNum+1 > cur_PointList.size()){
                     Toast.makeText(this,"恭喜！任务点全部完成！",Toast.LENGTH_SHORT).show();
                 }else {
-                    cur_Point = cur_PointList.get(cur_Point.order_num);
+                    cur_Point = cur_PointList.get(cur_Point.orderNum);
                     if ("已完成".equals(cur_Point.state))
                         setCurP2View(cur_Point);
-                    else if(answers_done.get(cur_Point.order_num-1)){
+                    else if(answers_done.get(cur_Point.orderNum-1)){
                         question.setText(cur_Point.question);
                         answer.setText("");
-                        p_confirm.setText(Integer.toString(cur_Point.order_num)+mission_cnt_str);
+                        p_confirm.setText(String.format("%s%s", cur_Point.orderNum, mission_cnt_str));
                         p_confirm.setTextColor(Color.BLACK);
                         displayImg(cur_Point);
                     } else {
                         question.setText(cur_Point.question);
                         answer.setText("");
-                        p_confirm.setText(Integer.toString(cur_Point.order_num) + mission_cnt_str);
+                        p_confirm.setText(String.format("%s%s", cur_Point.orderNum, mission_cnt_str));
                         p_confirm.setTextColor(Color.BLACK);
                         //设置为空图片
                         imageView.setImageBitmap(null);
@@ -262,7 +263,7 @@ public class MissionActivity extends Activity {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             cur_Mission.state = "未完成";
-                            cur_Mission.start_time = "";
+                            cur_Mission.startTime = "";
                             dmr.updateMissionState(cur_Mission);
                             MissionActivity.this.finish();
                         }

@@ -20,7 +20,6 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!--往SDCard读取写入数据权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA"/>
 
     <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />

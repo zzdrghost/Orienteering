@@ -8,9 +8,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.Environment;
 import android.os.Message;
 import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -42,9 +44,11 @@ import com.baidu.mapapi.map.Overlay;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.model.LatLngBounds;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.io.File;
+import org.json.*;
 
 public class MainActivity extends Activity {
     public final static String INTENT_EXTRA = "MISSION ID";
@@ -55,14 +59,23 @@ public class MainActivity extends Activity {
     private final static int myIndicatorColor = Color.parseColor("#D1EEEE");
     private final static int myDividerColor = Color.parseColor("#DEDEDE");
     private final static String[] tabTitles = {"地图","任务"};
+    private final static String URL="http://drghostserver.sinaapp.com:80";
+    //private final static String URL="http://202.114.118.90:8080";
+    private final static String savePath = Environment.getExternalStorageDirectory().
+            getPath()+"/orienteeringImg/";
+    private final static String JSON_FORM = "application/json";
+    private List<Integer> postMissionId;
 
-    private BitmapDescriptor failedBit = BitmapDescriptorFactory.fromAsset("failed_point.png");
-    private BitmapDescriptor completeBit = BitmapDescriptorFactory.fromAsset("complete_point.png");
-    private BitmapDescriptor inBit = BitmapDescriptorFactory.fromAsset("in_point.png");
+    private final static String FAILED_ICON = "failed_point.png";
+    private final static String COMPLETED_ICON = "complete_point.png";
+    private final static String IN_ICON = "in_point.png";
+    private BitmapDescriptor failedBit;
+    private BitmapDescriptor completeBit;
+    private BitmapDescriptor inBit;
     //TODO 优化数据结构
     private View view1,view2;
     List<View> viewList;
-    private ViewPager pager ;
+    private ViewPagerCompat pager ;
     SlidingTabLayout tabLayout;
     MyPageAdapter myPageAdapter;
 
@@ -75,13 +88,16 @@ public class MainActivity extends Activity {
     private ListView mListView;
 
     public DbManager dmr;
-    private List<Mission> missionList;
-    private List<MsPoint> cmsPointList;
-    private Mission currentMission;
+    private List<Mission> missionList=null;
+    private List<MsPoint> cmsPointList=null;
+    private Mission currentMission=null;
     private MsPoint cur_point = null;
 
     private final static int UPDATE_DONE = 1;
-
+    private final static int SYNCHRONIZE_DONE = 2;
+    private final static int SYNCHRONIZE_FAILED = 3;
+    private final static int SYNCHRONIZE_LATEST = 4;
+    
     private class  MyHandler extends Handler{
         @Override
         public void handleMessage(Message msg){
@@ -91,6 +107,19 @@ public class MainActivity extends Activity {
                     baiduMap.clear();
                     Toast.makeText(MainActivity.this,"任务进行中",Toast.LENGTH_SHORT).show();
                     addMarkers();
+                    break;
+                }
+                case SYNCHRONIZE_DONE:{
+                    updateMainData();
+                    Toast.makeText(MainActivity.this,"同步完成",Toast.LENGTH_SHORT).show();
+                    break;
+                }
+                case SYNCHRONIZE_FAILED:{
+                    Toast.makeText(MainActivity.this,"同步失败",Toast.LENGTH_SHORT).show();
+                    break;
+                }
+                case SYNCHRONIZE_LATEST:{
+                    Toast.makeText(MainActivity.this,"已是最新数据",Toast.LENGTH_SHORT).show();
                     break;
                 }
                 default:{break;}
@@ -113,12 +142,24 @@ public class MainActivity extends Activity {
         //获取SharedPreferences对象判断程序第一次安装
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         IS_FIRST_RUN = settings.getBoolean(FIRST_RUN,true);
-        //加入测试数据
+        //初始化数据
         initDbData();
         //初始化其他View
         initOtherView();
         //添加当前任务标注
         addMarkers();
+    }
+    //初始化数据
+    private void initDbData(){
+        failedBit = BitmapDescriptorFactory.fromAsset(FAILED_ICON);
+        completeBit = BitmapDescriptorFactory.fromAsset(COMPLETED_ICON);
+        inBit = BitmapDescriptorFactory.fromAsset(IN_ICON);
+        if (IS_FIRST_RUN){
+            dmr.clearData();
+            File imgDir = new File(savePath);
+            imgDir.mkdirs();
+            //synchronize();
+        }
     }
     //TODO 优化标签布局
     private void initViewPager(){
@@ -132,7 +173,7 @@ public class MainActivity extends Activity {
         viewList.add(view2);
 
         //设置ViewPager和SlidingTabLayout布局文件
-        pager =(ViewPager)findViewById(R.id.pager);
+        pager =(ViewPagerCompat)findViewById(R.id.pager);
         tabLayout=(SlidingTabLayout)findViewById(R.id.tab);
 
         //建立自定义PagerAdapter对象
@@ -141,6 +182,7 @@ public class MainActivity extends Activity {
         pager.setAdapter(myPageAdapter);
         //设置自定义TabView布局和选中下划线颜色
         tabLayout.setCustomTabView(R.layout.custom_tab, R.id.tab_texView);
+        tabLayout.setHorizontalScrollBarEnabled(true);
         tabLayout.setCustomTabColorizer(new SlidingTabLayout.TabColorizer() {
             @Override
             public int getIndicatorColor(int position) {
@@ -223,7 +265,7 @@ public class MainActivity extends Activity {
                         break;
                     }default:{break;}
                 }
-                if (null != cur_point && msp.order_num == cur_point.order_num){
+                if (null != cur_point && msp.orderNum == cur_point.orderNum){
                     marker.remove();
                     marker = baiduMap.addOverlay(new MarkerOptions()
                             .title("进行中")
@@ -260,41 +302,6 @@ public class MainActivity extends Activity {
         }
         return lms1;
     }
-    //测试数据
-    private void initDbData(){
-        if (IS_FIRST_RUN){
-            dmr.clearData();
-//            Mission ms = new Mission(1,"任务一","未完成","4小时","");
-//            dmr.addMission(ms);
-//            ms = new Mission(2,"任务二","已完成","4小时","");
-//            dmr.addMission(ms);
-//            ms = new Mission(3,"测试任务","进行中","4小时","10点30");
-//            dmr.addMission(ms);
-//            ms = new Mission(4,"任务四","创建中","4小时","");
-//            dmr.addMission(ms);
-//            List<MsPoint> mspl = new ArrayList<>();
-//            MsPoint msp = new MsPoint(1,1,"未完成",27.2,130.4,10.5,"好?","好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(1,2,"未完成",30.2,130.4,10.5,"不好?","不好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(2,1,"已完成",47.2,130.4,10.5,"好?","好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(3,1,"已完成",30.545132,114.300299,10.5,"好?","好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(3,2,"未完成",30.547183,114.292724,10.5,"不好?","不好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(3,3,"未完成",30.558048,114.301221,10.5,"不好?","不好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(3,4,"未完成",30.560755,114.303249,10.5,"不好?","不好","",30);
-//            mspl.add(msp);
-//            msp = new MsPoint(4,1,"未完成",77.2,130.4,10.5,"不好?","不好","",30);
-//            mspl.add(msp);
-//            dmr.addPoint(mspl);
-//            Log.i(TAG,"MainActivity 初始化测试数据");
-        }
-    }
-
-
     //重写PagerAdapter
     private class MyPageAdapter extends PagerAdapter {
 
@@ -342,8 +349,8 @@ public class MainActivity extends Activity {
                 missionList = sortMissions(dmr.queryMission());
                 currentMission = dmr.getCurrentMission();
                 if (null != currentMission){
-                    cur_point = dmr.getCurrentPoint(currentMission.mission_id);
-                    cmsPointList = dmr.queryMsPoint(currentMission.mission_id);
+                    cur_point = dmr.getCurrentPoint(currentMission.missionId);
+                    cmsPointList = dmr.queryMsPoint(currentMission.missionId);
                     handler.sendEmptyMessage(UPDATE_DONE);
                 }else {
                     cur_point = null;
@@ -374,13 +381,13 @@ public class MainActivity extends Activity {
                 switch (missionList.get(position).state){
                     case "进行中":{
                         Intent intent = new Intent(MainActivity.this,MissionActivity.class);
-                        intent.putExtra(INTENT_EXTRA,missionList.get(position).mission_id);
+                        intent.putExtra(INTENT_EXTRA,missionList.get(position).missionId);
                         startActivity(intent);
                         break;
                     }
                     case "创建中":{
                         Intent intent = new Intent(MainActivity.this,CreateActivity.class);
-                        intent.putExtra(INTENT_EXTRA,missionList.get(position).mission_id);
+                        intent.putExtra(INTENT_EXTRA,missionList.get(position).missionId);
                         startActivity(intent);
                         break;
                     }
@@ -394,13 +401,13 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             currentMission.state = "未完成";
-                                            currentMission.start_time = "";
+                                            currentMission.startTime = "";
                                             dmr.updateMissionState(currentMission);
                                             missionList.get(position).state = "进行中";
-                                            missionList.get(position).start_time = "now";
+                                            missionList.get(position).startTime = "now";
                                             dmr.updateMissionState(missionList.get(position));
                                             Intent intent = new Intent(MainActivity.this,MissionActivity.class);
-                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).mission_id);
+                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).missionId);
                                             startActivity(intent);
                                         }
                                     }).show();
@@ -412,10 +419,10 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             missionList.get(position).state = "进行中";
-                                            missionList.get(position).start_time = "now";
+                                            missionList.get(position).startTime = "now";
                                             dmr.updateMissionState(missionList.get(position));
                                             Intent intent = new Intent(MainActivity.this,MissionActivity.class);
-                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).mission_id);
+                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).missionId);
                                             startActivity(intent);
                                         }
                                     }).show();
@@ -432,13 +439,13 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             currentMission.state = "未完成";
-                                            currentMission.start_time = "";
+                                            currentMission.startTime = "";
                                             dmr.updateMissionState(currentMission);
                                             missionList.get(position).state = "进行中";
-                                            missionList.get(position).start_time = "now";
+                                            missionList.get(position).startTime = "now";
                                             dmr.updateMissionState(missionList.get(position));
                                             Intent intent = new Intent(MainActivity.this,MissionActivity.class);
-                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).mission_id);
+                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).missionId);
                                             startActivity(intent);
                                         }
                                     }).show();
@@ -450,10 +457,10 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             missionList.get(position).state = "进行中";
-                                            missionList.get(position).start_time = "now";
+                                            missionList.get(position).startTime = "now";
                                             dmr.updateMissionState(missionList.get(position));
                                             Intent intent = new Intent(MainActivity.this,MissionActivity.class);
-                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).mission_id);
+                                            intent.putExtra(INTENT_EXTRA, missionList.get(position).missionId);
                                             startActivity(intent);
                                         }
                                     }).show();
@@ -506,7 +513,7 @@ public class MainActivity extends Activity {
             //设置当前itemView的内容
             holder.tv_mission_title.setText(missionList.get(position).name);
             holder.tv_mission_state.setText(missionList.get(position).state);
-            holder.tv_last_time.setText(missionList.get(position).limit_time);
+            holder.tv_last_time.setText(missionList.get(position).limitTime);
             //设置当前convertView的布局
             switch (missionList.get(position).state){
                 case "已完成":{
@@ -547,7 +554,7 @@ public class MainActivity extends Activity {
     public boolean onPrepareOptionsMenu(Menu menu){
         menu.clear();
 
-        //设置mean样式
+        //设置menu样式
         MenuInflater menuInflater = this.getMenuInflater();
         switch (pager.getCurrentItem()){
             case 1:{
@@ -566,11 +573,19 @@ public class MainActivity extends Activity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            Log.i(TAG,"设置");
+        if (id == R.id.action_synchronize) {
+            new AlertDialog.Builder(this)
+                    .setMessage("同步在线任务？")
+                    .setNegativeButton("取消", null)
+                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            synchronize();
+                        }
+                    }).show();
+            Log.i(TAG,"MainActivity 同步任务");
             return true;
-        }
-        else if(id == R.id.action_new_mission){
+        } else if(id == R.id.action_new_mission){
             Log.i(TAG, "创建新任务");
             new AlertDialog.Builder(this)
                     .setTitle("新建任务")
@@ -586,11 +601,237 @@ public class MainActivity extends Activity {
             return true;
         }
         else if (id == R.id.action_about){
-            Log.i(TAG,"关于");
+            Log.i(TAG,"MainActivity 关于");
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private int confirmData(){
+        Log.i(TAG,"MainActivity confirmData");
+        List<Integer> client_missionId_list = new ArrayList<>();
+        if (null!=missionList){
+            for (Mission ms: missionList) {
+                client_missionId_list.add(ms.getMissionId());
+            }
+        }
+        JSONArray ja = new JSONArray(client_missionId_list);
+        String resp = null;
+        try {
+            resp = MyHttpRequest.postJson(URL+"/confirmdata",ja.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (null==resp){
+            return -1;
+        }
+        Log.i(TAG, resp);
+        try {
+            JSONObject rjo = new JSONObject(resp);
+            JSONArray uploadmsid_ja = rjo.getJSONArray("uploadlist");
+            JSONArray downloadmsid_ja = rjo.getJSONArray("downloadlist");
+            postMissionId = new ArrayList<>();
+            for (int i = 0; i < uploadmsid_ja.length(); i++) {
+                postMissionId.add((Integer)uploadmsid_ja.get(i));
+            }
+            for (int i = 0; i < downloadmsid_ja.length(); i++) {
+                postMissionId.add((Integer)downloadmsid_ja.get(i));
+            }
+            if (0 != uploadmsid_ja.length()) {
+                return 1;
+            }
+            if (0 != downloadmsid_ja.length()) {
+                return 2;
+            }
+        }catch (JSONException je){
+            je.printStackTrace();
+            return -1;
+        }
+        return 0;
+    }
+
+    private int postData(){
+        Log.i(TAG,"MainActivity postData");
+        //注意将state设置为未完成
+        List<Mission> listMS = new ArrayList<>();
+        List<MsPoint> listMSP = new ArrayList<>();
+        List<String> files = new ArrayList<>();
+
+        for (int msid: postMissionId) {
+            Mission mstemp = dmr.getMission(msid);
+            mstemp.setState("未完成");
+            listMS.add(mstemp);
+            List<MsPoint> mspltemp = dmr.queryMsPoint(msid);
+            if (null != mspltemp){
+                for(MsPoint msp : mspltemp){
+                    msp.setState("未完成");
+                    listMSP.add(msp);
+                    files.add(msp.getImgAddress());
+                }
+            }
+        }
+        JSONObject jo = new JSONObject();
+        try {
+            jo.put("mission", JsonTools.lmsToJa(listMS));
+            jo.put("mspoint", JsonTools.lmspToJa(listMSP));
+        }catch (JSONException je){
+            je.printStackTrace();
+            return -1;
+        }
+        int postJson_status = postJson(jo);
+        if (-1==postJson_status)
+            return -1;
+        int postImage_status = postImage(files);
+        if (-1==postImage_status)
+            return -1;
+        return 1;
+    }
+    private int postJson(JSONObject jo){
+        Log.i(TAG,"MainActivity postJson");
+        //Log.i(TAG,jo.toString());
+        String resp = null;
+        try {
+            resp = MyHttpRequest.postJson(URL + "/postjson", jo.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        }
+        if (null==resp){
+            Log.i(TAG, "MainActivity post json failed.");
+            return -1;
+        }
+        Log.i(TAG, resp);
+        return 1;
+    }
+    private int postImage(List<String> filenames){
+        Log.i(TAG,"MainActivity postImage");
+        String resp = null;
+        try {
+            resp = MyHttpRequest.postFiles(URL + "/postimage", filenames);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        }
+        Log.i(TAG, resp);
+        return 1;
+    }
+    private int getData(){
+        Log.i(TAG,"MainActivity getData");
+        JSONArray ja = new JSONArray(postMissionId);
+        String resp = null;
+        try {
+            resp = MyHttpRequest.postJson(URL+"/downloadjson",ja.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        }
+        if (null==resp){
+            Log.i(TAG,"MainActivitypost json failed.");
+            return -1;
+        }
+        //Log.i(TAG, resp);
+        try {
+            JSONObject rjo= new JSONObject(resp);
+            JSONArray msja=rjo.getJSONArray("mission");
+            Log.i(TAG, String.valueOf(msja.length()));
+            JSONArray mspja=rjo.getJSONArray("mspoint");
+            Log.i(TAG, String.valueOf(mspja.length()));
+            for(int i=0;i<msja.length();i++){
+                Mission mstemp=JsonTools.joToMs(msja.getJSONObject(i));
+                if (null != mstemp){
+                    dmr.addMission(mstemp);
+                    Log.i(TAG, mstemp.name);
+                }else {
+                    Log.i(TAG, "null");
+                }
+
+            }
+            List<MsPoint> listMSP = new ArrayList<>();
+            List<String> files = new ArrayList<>();
+            for (int i = 0; i < mspja.length(); i++) {
+                MsPoint msptemp=JsonTools.joToMsp(mspja.getJSONObject(i));
+                if (null != msptemp){
+                    Log.i(TAG, msptemp.orderNum + "\t" + msptemp.missionId);
+                    listMSP.add(msptemp);
+                    files.add(msptemp.imgAddress);
+                }
+            }
+            dmr.addPoint(listMSP);
+            int failedTimes=0;
+            for (String filename : files) {
+                try {
+                    if(-1==MyHttpRequest.getFile(URL + "/downloadimage/", filename))
+                        failedTimes++;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            Log.i(TAG,"MainActivity"+ failedTimes + "个图片下载失败");
+        }catch (JSONException je){
+            je.printStackTrace();
+            return -1;
+        }
+        return 1;
+    }
+    //判断当前网络是否可用
+    public boolean isNetworkAvailable(Activity activity)
+    {
+        Context context = activity.getApplicationContext();
+        // 获取手机所有连接管理对象（包括对wi-fi,net等连接的管理）
+        ConnectivityManager connectivityManager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (connectivityManager == null)
+        {
+            return false;
+        }
+        else
+        {
+            // 获取NetworkInfo对象
+            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+
+            if (networkInfo != null )
+            {
+                return networkInfo.isConnected();
+            }
+        }
+        return false;
+    }
+    private void synchronize(){
+        if (!isNetworkAvailable(MainActivity.this)){
+            Toast.makeText(MainActivity.this,"同步任务失败，当前网络状况不好",Toast.LENGTH_LONG).show();
+            return;
+        }
+        new Thread(){
+            public void run(){
+                Log.i(TAG,"MainActivity getData");
+                int confirm_type = confirmData();
+                if (1==confirm_type) {
+                    Log.i(TAG,"MainActivity upload data:" + postMissionId);
+                    int post_data_status=postData();
+                    if (1==post_data_status)
+                        handler.sendEmptyMessage(SYNCHRONIZE_DONE);
+                    else if (-1==post_data_status)
+                        handler.sendEmptyMessage(SYNCHRONIZE_FAILED);
+                }
+                else if (2==confirm_type) {
+                    Log.i(TAG,"MainActivity download data:" + postMissionId);
+                    int get_data_status=getData();
+                    if (1==get_data_status)
+                        handler.sendEmptyMessage(SYNCHRONIZE_DONE);
+                    else if (-1==get_data_status)
+                        handler.sendEmptyMessage(SYNCHRONIZE_FAILED);
+                }
+                else if (-1==confirm_type){
+                    handler.sendEmptyMessage(SYNCHRONIZE_FAILED);
+                }
+                else {
+                    handler.sendEmptyMessage(SYNCHRONIZE_LATEST);
+                }
+            }
+        }.start();
     }
 
     @Override

@@ -33,4 +33,10 @@
     <string name="display_picture">display a picture</string>
     <string name="confirm_answer">confirm answer</string>
     <string name="answer_question">Answer question to get hint</string>
+    <string name="camera_capture">PHOTO</string>
+    <string name="camera_ok">OK</string>
+    <string name="camera_cancel">CANCEL</string>
+    <string name="match">match</string>
+    <string name="match_title">move behind camera to target</string>
+    <string name="matching">matching…</string>
 </resources>

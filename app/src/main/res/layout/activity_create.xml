@@ -45,35 +45,54 @@
     </LinearLayout>
     <LinearLayout
         android:id="@+id/buttonPanel_c"
+        android:baselineAligned="false"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true">
-        <Button
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/point_before_c"
-            android:text="@string/before"
-            android:layout_weight="1"
-            android:onClick="point_before_c_click"/>
-        <Button
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="1">
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/point_before_c"
+                android:text="@string/before"
+                android:layout_gravity="center"
+                android:onClick="point_before_c_click"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/position_get"
-            android:text="@string/locate"
-            android:layout_weight="1"
-            android:onClick="position_get_click" />
-        <Button
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="1">
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/position_get"
+                android:text="@string/locate"
+                android:layout_gravity="center"
+                android:onClick="position_get_click" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/point_next_c"
-            android:text="@string/next"
-            android:layout_weight="1"
-            android:onClick="point_next_c_click"/>
+            android:orientation="vertical"
+            android:layout_weight="1">
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/point_next_c"
+                android:text="@string/next"
+                android:layout_gravity="center"
+                android:onClick="point_next_c_click"/>
+        </LinearLayout>
     </LinearLayout>
 
 </RelativeLayout>

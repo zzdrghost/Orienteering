@@ -66,7 +66,7 @@ public class MyHttpRequest {
     static String postFiles(String urlpath,List<String> filenames) throws IOException{
         URL url = new URL(urlpath);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setReadTimeout(10000);//设置5秒连接超时
+        conn.setReadTimeout(10000);//设置10秒连接超时
         conn.setDoInput(true);//设置允许输入
         conn.setDoOutput(true);//设置允许输出
         conn.setUseCaches(false);//不许缓存

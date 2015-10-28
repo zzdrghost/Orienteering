@@ -29,5 +29,11 @@
     <string name="before">上一个</string>
     <string name="next">下一个</string>
     <string name="locate">定位</string>
+    <string name="camera_capture">拍照</string>
+    <string name="camera_ok">确定</string>
+    <string name="camera_cancel">取消</string>
+    <string name="matching">正在匹配…</string>
+    <string name="match_title">请将后置摄像头指向目标</string>
+    <string name="match">匹配</string>
 
 </resources>

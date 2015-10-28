@@ -23,10 +23,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.os.Handler;
 import android.widget.Toast;
+import android.widget.ZoomControls;
 
 import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.SDKInitializer;
@@ -147,13 +149,16 @@ public class MainActivity extends Activity {
         //初始化其他View
         initOtherView();
         //添加当前任务标注
-        addMarkers();
+        //addMarkers();
     }
     //初始化数据
     private void initDbData(){
         failedBit = BitmapDescriptorFactory.fromAsset(FAILED_ICON);
         completeBit = BitmapDescriptorFactory.fromAsset(COMPLETED_ICON);
         inBit = BitmapDescriptorFactory.fromAsset(IN_ICON);
+        //更新数据
+        missionList = sortMissions(dmr.queryMission());
+        currentMission = dmr.getCurrentMission();
         if (IS_FIRST_RUN){
             dmr.clearData();
             File imgDir = new File(savePath);
@@ -203,12 +208,19 @@ public class MainActivity extends Activity {
     private void initOtherView(){
         //获取mapView
         mapView = (MapView) view1.findViewById(R.id.mapview);
+        // 隐藏logo
+        View child = mapView.getChildAt(1);
+        if (child != null && (child instanceof ImageView || child instanceof ZoomControls)){
+            child.setVisibility(View.INVISIBLE);
+        }
+        //地图上比例尺
+        mapView.showScaleControl(false);
+        // 隐藏缩放控件
+        mapView.showZoomControls(false);
         baiduMap = mapView.getMap();
         //获取view2中的控件
         mListView = (ListView) view2.findViewById(R.id.mListView);
-        //更新数据
-        missionList = sortMissions(dmr.queryMission());
-        currentMission = dmr.getCurrentMission();
+
         myBaseAdapter = new MyBaseAdapter(getApplicationContext());
         mListView.setAdapter(myBaseAdapter);
         setListener();
@@ -219,12 +231,16 @@ public class MainActivity extends Activity {
         locationClient.registerLocationListener(new BDLocationListener() {
             @Override
             public void onReceiveLocation(BDLocation bdLocation) {
-                if (bdLocation == null)
-                    return;
-                cur_position = new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude());
-                MapStatusUpdate mapStatusUpdate = MapStatusUpdateFactory.newLatLngZoom(cur_position,19);
-                baiduMap.setMapStatus(mapStatusUpdate);
-                Toast.makeText(MainActivity.this, "定位完成", Toast.LENGTH_SHORT).show();
+                if (bdLocation.getLocType()==BDLocation.TypeGpsLocation
+                        || bdLocation.getLocType()==BDLocation.TypeNetWorkLocation
+                        || bdLocation.getLocType()==BDLocation.TypeOffLineLocation){
+                    cur_position = new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude());
+                    MapStatusUpdate mapStatusUpdate = MapStatusUpdateFactory.newLatLngZoom(cur_position,19);
+                    baiduMap.setMapStatus(mapStatusUpdate);
+                    Toast.makeText(MainActivity.this, "定位完成", Toast.LENGTH_SHORT).show();
+                }else {
+                    Toast.makeText(MainActivity.this, "定位失败", Toast.LENGTH_SHORT).show();
+                }
                 locationClient.unRegisterLocationListener(this);
                 locationClient.stop();
             }
@@ -613,7 +629,8 @@ public class MainActivity extends Activity {
         List<Integer> client_missionId_list = new ArrayList<>();
         if (null!=missionList){
             for (Mission ms: missionList) {
-                client_missionId_list.add(ms.getMissionId());
+                if(!"创建中".equals(ms.state))
+                    client_missionId_list.add(ms.getMissionId());
             }
         }
         JSONArray ja = new JSONArray(client_missionId_list);
@@ -844,11 +861,12 @@ public class MainActivity extends Activity {
         Log.i(TAG, "MainActivity onRestart");
         super.onRestart();
     }
+
     @Override
     protected void onResume() {
         Log.i(TAG, "MainActivity onResume");
-        updateMainData();
         mapView.onResume();
+        updateMainData();
         super.onResume();
     }
     @Override

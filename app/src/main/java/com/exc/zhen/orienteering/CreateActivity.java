@@ -40,6 +40,7 @@ import java.util.List;
 
 public class CreateActivity extends Activity {
     private final static String TAG = "MyDebug";
+    public final static String INTENT_EXTRA = "OUT PUT";
     private int cur_msid;
     private Mission cur_Mission;
     private List<MsPoint> cur_PointList;
@@ -50,41 +51,17 @@ public class CreateActivity extends Activity {
     private ImageView imageView;
     private final static String savePath = Environment.getExternalStorageDirectory().
             getPath()+"/orienteeringImg/";
+    private Bitmap bitmap=null;
     private Uri imageUri;
     private String imageName;
     public static final int TAKE_PHOTO = 1;
     public static final int CROP_PHOTO = 2;
     private LocationClient locationClient;
 
-//    private SensorManager sm;
-//    private Sensor aSensor,mSensor;
-//    float[] accelerometerValues = new float[3];
-//    float[] magneticFieldValues = new float[3];
 
     private boolean param_get = true;
     private boolean positioning = false;
 
-//    final SensorEventListener sensorListener = new SensorEventListener() {
-//        @Override
-//        public void onSensorChanged(SensorEvent event) {
-//            if (Sensor.TYPE_ACCELEROMETER == event.sensor.getType())
-//                accelerometerValues = event.values;
-//            if (Sensor.TYPE_MAGNETIC_FIELD == event.sensor.getType())
-//                magneticFieldValues = event.values;
-//            float[] values = new float[3];
-//            float[] R = new float[9];
-//            SensorManager.getRotationMatrix(R, null, accelerometerValues, magneticFieldValues);
-//            SensorManager.getOrientation(R, values);
-//            if (0 > values[0])
-//                values[0] = (float) Math.toDegrees(values[0])+360f;
-//            else
-//                values[0] = (float) Math.toDegrees(values[0]);
-//            answer.setText(values[0]+"");
-//        }
-//
-//        @Override
-//        public void onAccuracyChanged(Sensor sensor, int accuracy) { }
-//    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,12 +74,6 @@ public class CreateActivity extends Activity {
         if (-1 != cur_msid){
             mission_title.setText(cur_Mission.name);
         }
-        //获取orientation参数
-//        sm = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-//        aSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        mSensor = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-//        sm.registerListener(sensorListener, aSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//        sm.registerListener(sensorListener, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     //获取MainActivity传递的数据,初始化数据
@@ -145,12 +116,14 @@ public class CreateActivity extends Activity {
         locationClient.registerLocationListener(new BDLocationListener() {
             @Override
             public void onReceiveLocation(BDLocation bdLocation) {
-                if (null != bdLocation) {
+                if (bdLocation.getLocType()==BDLocation.TypeGpsLocation
+                        || bdLocation.getLocType()==BDLocation.TypeNetWorkLocation
+                        || bdLocation.getLocType()==BDLocation.TypeOffLineLocation){
+
                     cur_Point.latitude = bdLocation.getLatitude();
                     cur_Point.longitude = bdLocation.getLongitude();
                     cur_Point.height = bdLocation.getAltitude();
-                    Toast.makeText(CreateActivity.this, "定位完成\n" + cur_Point.latitude
-                            + "," + cur_Point.longitude + "\n" + cur_Point.height, Toast.LENGTH_LONG).show();
+                    Toast.makeText(CreateActivity.this, "定位完成", Toast.LENGTH_LONG).show();
                     p_get.setTextColor(Color.RED);
                     param_get = true;//判断定位成功
                     positioning = false;//定位结束
@@ -179,7 +152,7 @@ public class CreateActivity extends Activity {
     }
     // 判断当前point是否可以保存
     private boolean isValidPoint(MsPoint msp){
-        return (get_phone_param_done(msp) && !"".equals(cur_Point.imgAddress));
+        return (msp.orientation != -1 && get_phone_param_done(msp) && !"".equals(msp.imgAddress));
     }
     //将当前point插入pointList（更新及插入）
     private void updateList(){
@@ -199,9 +172,7 @@ public class CreateActivity extends Activity {
         question.setText(msp.question);
         answer.setText(msp.answer);
         //图片解析成Bitmap对象
-        BitmapFactory.Options bitmapOption = new BitmapFactory.Options();
-        bitmapOption.inSampleSize = 4;
-        Bitmap bitmap = BitmapFactory.decodeFile(savePath+cur_Point.imgAddress,bitmapOption);
+        bitmap = BitmapFactory.decodeFile(savePath+cur_Point.imgAddress);
         imageView.setImageBitmap(bitmap);
     }
 
@@ -248,25 +219,35 @@ public class CreateActivity extends Activity {
                             e.printStackTrace();
                         }
                         imageUri = Uri.fromFile(outputImage);
-                        Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-                        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-                        startActivityForResult(intent,TAKE_PHOTO);
+                        //Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        Intent intent = new Intent(CreateActivity.this,MyCameraActivity.class);
+                        //intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+                        //startActivityForResult(intent,TAKE_PHOTO);
+                        intent.putExtra(CreateActivity.INTENT_EXTRA,outputImage.getPath());
+                        startActivityForResult(intent, TAKE_PHOTO);
                     }
                 }).show();
     }
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
         super.onActivityResult(requestCode,resultCode, data);
         if (resultCode != Activity.RESULT_OK) {
-            Toast.makeText(CreateActivity.this, "ActivityResult " + resultCode + "error",
+            Toast.makeText(CreateActivity.this, "没拍到照片",
                     Toast.LENGTH_SHORT).show();
             return;
         }
+        Float z,x,y;
+        Bundle bundle = data.getExtras();
+        z=bundle.getFloat("zvalue");
+        x=bundle.getFloat("xvalue");
+        y=bundle.getFloat("yvalue");
+        cur_Point.orientation=z;
+
         try {
             //图片解析成Bitmap对象
-            Bitmap bitmap = BitmapFactory.decodeStream(
+            bitmap = BitmapFactory.decodeStream(
                     getContentResolver().openInputStream(imageUri));
             cur_Point.imgAddress = imageName+".jpg";
-            Toast.makeText(CreateActivity.this, imageUri.getPath(), Toast.LENGTH_LONG).show();
+            //Toast.makeText(CreateActivity.this, imageUri.getPath(), Toast.LENGTH_LONG).show();
             imageView.setImageBitmap(bitmap); //将照片显示出来
         } catch(FileNotFoundException e) {
             e.printStackTrace();
@@ -409,6 +390,8 @@ public class CreateActivity extends Activity {
     protected void onDestroy() {
         Log.i(TAG, "CreateActivity onDestroy");
         dmr.closeDB();
+        if (null!=bitmap)
+            bitmap.recycle();
         super.onDestroy();
     }
 }

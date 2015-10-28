@@ -38,6 +38,7 @@ public class MissionActivity extends Activity {
     private final static String TAG = "MyDebug";
     private final static String savePath = Environment.getExternalStorageDirectory().
             getPath()+"/orienteeringImg/";
+    private Bitmap bitmap=null;
     private int cur_msid;
     private Mission cur_Mission;
     private List<MsPoint> cur_PointList;
@@ -52,6 +53,7 @@ public class MissionActivity extends Activity {
     private LocationClient locationClient;
     private double latitude,longitude,height,orientation;
     private boolean positioning = false;
+    boolean positiontrue = true;
 
 
     @Override
@@ -106,10 +108,8 @@ public class MissionActivity extends Activity {
     }
     private void displayImg(MsPoint msp){
         //图片解析成Bitmap对象
-        BitmapFactory.Options bitmapOption = new BitmapFactory.Options();
-        bitmapOption.inSampleSize = 4;
         if (!"".equals(msp.imgAddress)){
-            Bitmap bitmap = BitmapFactory.decodeFile(savePath+msp.imgAddress,bitmapOption);
+            bitmap = BitmapFactory.decodeFile(savePath+msp.imgAddress);
             imageView.setImageBitmap(bitmap);
         }
     }
@@ -120,38 +120,31 @@ public class MissionActivity extends Activity {
         locationClient.registerLocationListener(new BDLocationListener() {
             @Override
             public void onReceiveLocation(BDLocation bdLocation) {
-                if (null != bdLocation){
-                    boolean FoundPoint = true;
+                if (bdLocation.getLocType()==BDLocation.TypeGpsLocation
+                        || bdLocation.getLocType()==BDLocation.TypeNetWorkLocation
+                        || bdLocation.getLocType()==BDLocation.TypeOffLineLocation){
+
                     latitude = bdLocation.getLatitude();
                     longitude = bdLocation.getLongitude();
                     height = bdLocation.getAltitude();
 
 //                    TODO 定位数据与任务数据比较
-
                     double distance = DistanceUtil.getDistance(new LatLng(latitude, longitude),
                             new LatLng(cur_Point.latitude,cur_Point.longitude));
-                    new AlertDialog.Builder(MissionActivity.this)
-                            .setMessage(cur_Point.latitude + "," + cur_Point.longitude
-                                    + "\n" + latitude + "," + longitude
-                                    +"\n"+distance+"\n"+cur_Point.orientation+"\n"+orientation).show();
-                    if (25 < distance) FoundPoint = false;
+//                    new AlertDialog.Builder(MissionActivity.this)
+//                            .setMessage(cur_Point.latitude + "," + cur_Point.longitude
+//                                    + "\n" + latitude + "," + longitude
+//                                    +"\n"+distance+"\n"+cur_Point.orientation+"\n"+orientation).show();
+                    if (25 < distance) positiontrue = false;
 //                    if (5 < Math.abs(orientation-cur_Point.orientation)) FoundPoint = false;
-                    if (FoundPoint){
-                        p_confirm.setTextColor(Color.RED);
-                        cur_Point.state = "已完成";
-                        dmr.updatePointState(cur_Point);
-                        cur_PointList.set(cur_Point.orderNum-1,cur_Point);
-                        answers_done.set(cur_Point.orderNum-1,true);
-                        if (answers_done.get(cur_Point.orderNum-1)){
-                            answer.setText(cur_Point.answer);
-                            displayImg(cur_Point);
-                        }
-                        if (cur_Point.orderNum == cur_PointList.size()){
-                            cur_Mission.state = "已完成";
-                            cur_Mission.startTime = "";
-                            dmr.updateMissionState(cur_Mission);
-                            Toast.makeText(MissionActivity.this,"恭喜！任务点全部完成！",Toast.LENGTH_SHORT).show();
-                        }else {Toast.makeText(MissionActivity.this,"找到了！快去找下一个点吧！~",Toast.LENGTH_SHORT).show();}
+                    if (positiontrue){
+                        locationClient.unRegisterLocationListener(this);
+                        locationClient.stop();
+                        positioning = false;//判断定位结束
+                        Intent intent = new Intent(MissionActivity.this,MatchMspActivity.class);
+                        double [] sensor_paras = {cur_Point.orientation};
+                        intent.putExtra("cur_sensor_paras",sensor_paras);
+                        startActivityForResult(intent,1);
                     }else{
                         Toast.makeText(MissionActivity.this,"不是这儿~",Toast.LENGTH_SHORT).show();
                     }
@@ -159,6 +152,7 @@ public class MissionActivity extends Activity {
 
                 }else {
                     p_confirm.setTextColor(Color.BLACK);
+                    positiontrue = false;
                     Toast.makeText(MissionActivity.this,"定位失败，请重新定位",Toast.LENGTH_SHORT).show();
                     positioning = false;
                 }
@@ -205,11 +199,38 @@ public class MissionActivity extends Activity {
         if (!positioning){
             if ("未完成".equals(cur_Point.state)){
                 positioning = true;
+                positiontrue = true;
                 confirm_position();
             }
         }
     }
-
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        super.onActivityResult(requestCode,resultCode, data);
+        if (resultCode != Activity.RESULT_OK) {
+            Toast.makeText(MissionActivity.this, "Activity Result " + resultCode + "error",
+                    Toast.LENGTH_SHORT).show();
+        }
+        else {
+            int sensor_result = data.getIntExtra("sensor_result",-1);
+            if (sensor_result==1){
+                p_confirm.setTextColor(Color.RED);
+                cur_Point.state = "已完成";
+                dmr.updatePointState(cur_Point);
+                cur_PointList.set(cur_Point.orderNum-1,cur_Point);
+                answers_done.set(cur_Point.orderNum-1,true);
+                if (answers_done.get(cur_Point.orderNum-1)){
+                    answer.setText(cur_Point.answer);
+                    displayImg(cur_Point);
+                }
+                if (cur_Point.orderNum == cur_PointList.size()){
+                    cur_Mission.state = "已完成";
+                    cur_Mission.startTime = "";
+                    dmr.updateMissionState(cur_Mission);
+                    Toast.makeText(MissionActivity.this,"恭喜！任务点全部完成！",Toast.LENGTH_SHORT).show();
+                }else {Toast.makeText(MissionActivity.this,"找到了！快去找下一个点吧！~",Toast.LENGTH_SHORT).show();}
+            }else {Toast.makeText(MissionActivity.this,"不是这儿~",Toast.LENGTH_SHORT).show();}
+        }
+    }
     public void point_next_m_click(View view) {
         if (!positioning){
             if ("已完成".equals(cur_Point.state)){
@@ -319,6 +340,8 @@ public class MissionActivity extends Activity {
     protected void onDestroy() {
         Log.i(TAG, "MissionActivity onDestroy");
         dmr.closeDB();
+        if (null!=bitmap)
+            bitmap.recycle();
         super.onDestroy();
     }
 }

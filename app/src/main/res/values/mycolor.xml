@@ -5,7 +5,6 @@
     <color name="failedColor">#FFEFD5</color>
     <color name="creatingColor">#4F94CD</color>
     <color name="list_pressed_color">#FCFCFC</color>
-
     <color name="white_smoke">#F5F5F5</color><!--烟白色 -->
-
+    <color name="half_transparent">#64000000</color>
 </resources>

@@ -28,7 +28,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.WindowManager;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -41,9 +41,9 @@ import android.graphics.Matrix;
 public class MyCameraActivity extends Activity {
     private final static String TAG = "MyDebug";
     Camera.Parameters parameters;
-    private Button btn_camera_capture = null;
-    private Button btn_camera_cancel = null;
-    private Button btn_camera_ok = null;
+    private ImageButton btn_camera_capture = null;
+    private ImageButton btn_camera_cancel = null;
+    private ImageButton btn_camera_ok = null;
     private TextView ztextView=null;
     private TextView xtextView=null;
     private TextView ytextView=null;
@@ -106,9 +106,9 @@ public class MyCameraActivity extends Activity {
         Intent intent = getIntent();
         //imageUri = Uri.parse(intent.getStringExtra(CreateActivity.INTENT_EXTRA));
         imagePath = intent.getStringExtra(CreateActivity.INTENT_EXTRA);
-        btn_camera_capture = (Button) findViewById(R.id.camera_capture);
-        btn_camera_ok = (Button) findViewById(R.id.camera_ok);
-        btn_camera_cancel = (Button) findViewById(R.id.camera_cancel);
+        btn_camera_capture = (ImageButton) findViewById(R.id.camera_capture);
+        btn_camera_ok = (ImageButton) findViewById(R.id.camera_ok);
+        btn_camera_cancel = (ImageButton) findViewById(R.id.camera_cancel);
         btn_camera_capture.setVisibility(View.VISIBLE);
         btn_camera_ok.setVisibility(View.INVISIBLE);
         btn_camera_cancel.setVisibility(View.INVISIBLE);
@@ -192,7 +192,10 @@ public class MyCameraActivity extends Activity {
             parameters.setPictureSize(pictureSize.width,pictureSize.height);
             parameters.setPreviewFrameRate(5);  //设置每秒显示4帧
             parameters.setJpegQuality(80); // 设置照片质量
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//连续对焦
             camera.setParameters(parameters);
+            camera.cancelAutoFocus();
+
         }
         //必须放在onResume中，不然会出现Home键之后，再回到该APP，黑屏
         mySurfaceView = new MySurfaceView(getApplicationContext(), camera);

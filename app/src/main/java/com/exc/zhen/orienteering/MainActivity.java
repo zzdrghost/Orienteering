@@ -785,7 +785,7 @@ public class MainActivity extends Activity {
                     e.printStackTrace();
                 }
             }
-            Log.i(TAG,"MainActivity"+ failedTimes + "个图片下载失败");
+            Log.i(TAG,"MainActivity "+ failedTimes + "个图片下载失败");
         }catch (JSONException je){
             je.printStackTrace();
             return -1;
